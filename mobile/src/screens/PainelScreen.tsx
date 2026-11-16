@@ -62,6 +62,8 @@ export default function PainelScreen({ navigation }: PropsAba<'Painel'>) {
   const capacidades = dados?.capacidadesLitros ?? {};
   const bombas = (dados?.atuadores ?? []).filter((a) => a.tipo === 'BOMBA');
   const bombasLigadas = bombas.filter((b) => b.estado === 'LIGADO').length;
+  const valvulas = (dados?.atuadores ?? []).filter((a) => a.tipo === 'VALVULA');
+  const valvulasAbertas = valvulas.filter((v) => v.estado === 'LIGADO').length;
   const falhaRecente = dados?.ultimasFalhas?.[0];
   const pontosSaida = pontosDoSensor(historicoVazao.dados, 'SAIDA');
   const pontosEntrada = pontosDoSensor(historicoVazao.dados, 'ENTRADA');
@@ -151,10 +153,28 @@ export default function PainelScreen({ navigation }: PropsAba<'Painel'>) {
             subtitulo={`${bombasLigadas} de ${bombas.length} ${bombasLigadas === 1 ? 'ligada' : 'ligadas'}`}
             acao={{ rotulo: 'Controlar', onPress: () => navigation.navigate('Energia') }}
           >
-            <View style={estilos.bombas}>
+            <View style={estilos.atuadores}>
               {bombas.map((bomba) => (
                 <LinhaAtuador key={bomba.id} atuador={bomba} />
               ))}
+            </View>
+          </CartaoSecao>
+
+          <CartaoSecao
+            titulo={valvulas.length > 1 ? 'Válvulas' : 'Válvula'}
+            subtitulo={
+              valvulas.length > 1
+                ? `${valvulasAbertas} de ${valvulas.length} ${valvulasAbertas === 1 ? 'aberta' : 'abertas'}`
+                : 'Controla a saída de água para a rede'
+            }
+            acao={{ rotulo: 'Controlar', onPress: () => navigation.navigate('Agua', { secao: 'valvula' }) }}
+          >
+            <View style={estilos.atuadores}>
+              {valvulas.length ? (
+                valvulas.map((valvula) => <LinhaAtuador key={valvula.id} atuador={valvula} />)
+              ) : (
+                <Text style={estilos.vazio}>Nenhuma válvula cadastrada.</Text>
+              )}
             </View>
           </CartaoSecao>
 
@@ -206,5 +226,6 @@ const estilos = StyleSheet.create({
     gap: 8,
   },
   nomeReservatorio: { color: cores.texto, fontFamily: fontes.seminegrito, fontSize: 13, alignSelf: 'flex-start' },
-  bombas: { gap: 8 },
+  atuadores: { gap: 8 },
+  vazio: { color: cores.textoSecundario, fontFamily: fontes.regular, fontStyle: 'italic', fontSize: 12 },
 });

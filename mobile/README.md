@@ -18,7 +18,7 @@ Disciplina: **Advanced Programming and Mobile Dev** — Global Solution 2026.2 (
 
 | Tela | Conteúdo |
 |---|---|
-| **Painel** | Cabeçalho com gota, título e botão ↻. Estado "Estação online" / "API fora do ar" com horário. Banner clicável da falha aberta. Medidores circulares dos reservatórios A e B. Vazão atual e consumo elétrico. Bombas ("1 de 2 ligada"). Gráfico de vazão dos últimos 15 min com tendência por regressão linear |
+| **Painel** | Cabeçalho com gota, título e botão ↻. Estado "Estação online" / "API fora do ar" com horário. Banner clicável da falha aberta. Medidores circulares dos reservatórios A e B. Vazão atual e consumo elétrico. Bombas ("1 de 2 ligada") e válvula de distribuição, cada seção com o atalho **Controlar** (para Energia e para Água; o da válvula já rola até o comando). Gráfico de vazão dos últimos 15 min com tendência por regressão linear |
 | **Água** | Volume em litros sobre a capacidade (configurada no backend), estado, última leitura, mensagens de nível crítico, histórico de 30 min com linhas de mínimo/máximo, vazões e comando da válvula |
 | **Energia** | Potência instantânea (kW), gráfico de 30 min, energia estimada em **kWh** (integração potência × tempo, marcada como estimativa simulada), consumo por equipamento e ligar/desligar bombas com confirmação |
 | **Alertas** | Falhas com origem, descrição, severidade, horário e estado; abertas em destaque; filtro Abertas/Todas/Resolvidas; toque para os detalhes |

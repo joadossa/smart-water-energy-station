@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -22,10 +22,11 @@ import { acaoPara, corDaAcao, descreverEstado, nomeAtuador } from '../utils/atua
 import { calcularTendencia, pontosDoSensor } from '../utils/estatistica';
 import { formatarHora, formatarInteiro, formatarNumero, nomeSensor } from '../utils/formatar';
 import { descreverTendencia, situacaoNivel } from '../utils/textos';
+import type { PropsAba } from '../navigation/tipos';
 
 const RESERVATORIOS = ['RES-A', 'RES-B'];
 
-export default function AguaScreen() {
+export default function AguaScreen({ navigation, route }: PropsAba<'Agua'>) {
   const { api } = useApiConfig();
   const { definirFalhasAbertas } = useResumo();
 
@@ -54,6 +55,17 @@ export default function AguaScreen() {
     if (status.dados) definirFalhasAbertas(status.dados.falhasAbertas);
   }, [status.dados, definirFalhasAbertas]);
 
+  // Atalho "Controlar" da válvula no Painel: rola até o card da válvula assim que ele tiver posição
+  const rolagem = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const [posicaoValvula, setPosicaoValvula] = useState<number | null>(null);
+  const secao = route.params?.secao;
+
+  useEffect(() => {
+    if (secao !== 'valvula' || posicaoValvula === null) return;
+    rolagem.current?.scrollTo({ y: Math.max(0, posicaoValvula - 8), animated: true });
+    navigation.setParams({ secao: undefined });
+  }, [secao, posicaoValvula, navigation]);
+
   async function puxarParaAtualizar() {
     setPuxando(true);
     await atualizarTudo();
@@ -75,6 +87,7 @@ export default function AguaScreen() {
   return (
     <>
       <ScrollView
+        ref={rolagem}
         style={estilos.tela}
         contentContainerStyle={estilos.conteudo}
         refreshControl={<RefreshControl refreshing={puxando} onRefresh={puxarParaAtualizar} tintColor={cores.ciano} colors={[cores.ciano]} />}
@@ -170,22 +183,24 @@ export default function AguaScreen() {
           />
         </CartaoSecao>
 
-        <CartaoSecao titulo="Válvula de distribuição" subtitulo="Controla a saída de água para a rede">
-          <MensagemResultado resultado={acionamento.resultado} onFechar={acionamento.limparResultado} />
-          {valvulas.length ? (
-            valvulas.map((valvula) => (
-              <BotaoAtuador
-                key={valvula.id}
-                atuador={valvula}
-                onAlternar={status.erro ? null : acionamento.solicitar}
-                ocupado={acionamento.executando && pedido?.atuador.id === valvula.id}
-              />
-            ))
-          ) : (
-            <Text style={estilos.vazio}>Nenhuma válvula cadastrada.</Text>
-          )}
-          {status.erro ? <Text style={estilos.vazio}>Comandos desabilitados enquanto a API estiver fora do ar.</Text> : null}
-        </CartaoSecao>
+        <View onLayout={(e) => setPosicaoValvula(e.nativeEvent.layout.y)}>
+          <CartaoSecao titulo="Válvula de distribuição" subtitulo="Controla a saída de água para a rede">
+            <MensagemResultado resultado={acionamento.resultado} onFechar={acionamento.limparResultado} />
+            {valvulas.length ? (
+              valvulas.map((valvula) => (
+                <BotaoAtuador
+                  key={valvula.id}
+                  atuador={valvula}
+                  onAlternar={status.erro ? null : acionamento.solicitar}
+                  ocupado={acionamento.executando && pedido?.atuador.id === valvula.id}
+                />
+              ))
+            ) : (
+              <Text style={estilos.vazio}>Nenhuma válvula cadastrada.</Text>
+            )}
+            {status.erro ? <Text style={estilos.vazio}>Comandos desabilitados enquanto a API estiver fora do ar.</Text> : null}
+          </CartaoSecao>
+        </View>
       </ScrollView>
 
       <ConfirmacaoModal

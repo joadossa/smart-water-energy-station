@@ -42,7 +42,7 @@ Disciplinas: *Advanced Programming and Mobile Dev* (app) e *Técnicas Avançadas
 ## Funcionalidades
 
 **App**
-- **Painel:** conectividade ("Estação online" / "API fora do ar"), banner da falha aberta, medidores circulares dos reservatórios A e B, vazão atual, consumo elétrico, bombas ("1 de 2 ligada") e gráfico de vazão dos últimos 15 min com tendência calculada
+- **Painel:** conectividade ("Estação online" / "API fora do ar"), banner da falha aberta, medidores circulares dos reservatórios A e B, vazão atual, consumo elétrico, bombas ("1 de 2 ligada"), válvula de distribuição com atalho para o comando na aba Água e gráfico de vazão dos últimos 15 min com tendência calculada
 - **Água:** volume em litros sobre a capacidade configurada, histórico de níveis, mensagens de nível crítico, vazões e válvula
 - **Energia:** potência instantânea (kW), histórico, energia estimada (kWh por integração potência × tempo) e controle das bombas com confirmação
 - **Alertas:** falhas com origem, severidade, horário e estado; filtro, detalhes e resolução
@@ -148,7 +148,7 @@ Testes do backend: `cd backend && ./mvnw test` (Windows: `.\mvnw.cmd test`).
 ## Roteiro de demonstração
 
 1. **Iniciar** o Spring Boot (`./mvnw spring-boot:run`) e o app (`npx expo start`).
-2. **Visão geral:** o Painel mostra os dados vindos da API (medidores, vazão, consumo, bombas) e o horário da atualização.
+2. **Visão geral:** o Painel mostra os dados vindos da API (medidores, vazão, consumo, bombas e válvula) e o horário da atualização.
 3. **Nova leitura:** registre uma leitura (`POST /api/leituras`, via `requests.http` ou curl). Os indicadores e o gráfico mudam na próxima atualização, ou na hora pelo botão ↻.
 4. **Acionar bomba:** em Energia, toque em **Ligar** na Bomba 2 e confirme. O app mostra "confirmado pelo servidor", e `GET /api/atuadores/2` também mostra `LIGADO`.
 5. **Falha de nível baixo:** com a Bomba 2 desligada, o Reservatório B esvazia até abrir `NIVEL_BAIXO`, que aparece no banner do Painel, no contador e em Alertas. Para forçar, use `POST /api/leituras` com `{"tipo":"NIVEL","sensor":"RES-B","valor":12}`.

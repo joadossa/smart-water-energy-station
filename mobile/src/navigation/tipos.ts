@@ -7,7 +7,8 @@ import type { Falha } from '../types/api';
 /** Abas da barra inferior. */
 export type AbasParamList = {
   Painel: undefined;
-  Agua: undefined;
+  /** secao: 'valvula' rola a tela até o controle da válvula (atalho "Controlar" do Painel). */
+  Agua: { secao?: 'valvula' } | undefined;
   Energia: undefined;
   Alertas: undefined;
 };
