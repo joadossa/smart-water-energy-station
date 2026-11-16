@@ -1,46 +1,64 @@
 import React from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import { cores, coresSeveridade } from '../theme/cores';
-import { formatarDataHora } from '../utils/formatar';
+import EtiquetaStatus from './EtiquetaStatus';
+import { cores, coresSeveridade, fontes, raio } from '../theme/cores';
+import type { Falha } from '../types/api';
+import { formatarDataHora, nomeSensor } from '../utils/formatar';
 
-/** Item da lista de falhas (alertas). */
-export default function AlertaItem({ falha, onResolver, resolvendo = false }) {
-  const cor = coresSeveridade[falha.severidade] || cores.alerta;
+interface Props {
+  falha: Falha;
+  /** Abre os detalhes da falha. */
+  onPress?: (falha: Falha) => void;
+  /** Resolve a falha. Se nulo (ex.: API fora do ar), o botão não aparece. */
+  onResolver?: ((falha: Falha) => void) | null;
+  resolvendo?: boolean;
+}
+
+/** Item da lista de falhas: abertas em destaque, resolvidas atenuadas. */
+export default function AlertaItem({ falha, onPress, onResolver, resolvendo = false }: Props) {
+  const cor = coresSeveridade[falha.severidade] ?? cores.laranja;
 
   return (
-    <View style={[estilos.card, { borderLeftColor: cor }]}>
+    <Pressable
+      onPress={onPress ? () => onPress(falha) : undefined}
+      disabled={!onPress}
+      style={({ pressed }) => [
+        estilos.card,
+        { borderLeftColor: cor },
+        falha.resolvida ? estilos.resolvida : estilos.aberta,
+        pressed && { opacity: 0.85 },
+      ]}
+    >
       <View style={estilos.linha}>
-        <View style={[estilos.badge, { backgroundColor: cor }]}>
-          <Text style={estilos.badgeTexto}>{falha.severidade}</Text>
-        </View>
-        <Text style={estilos.codigo} numberOfLines={1}>
-          {falha.codigo}
-        </Text>
+        <EtiquetaStatus texto={falha.severidade} cor={cor} />
+        <EtiquetaStatus
+          texto={falha.resolvida ? 'Resolvida' : 'Aberta'}
+          cor={falha.resolvida ? cores.verde : cores.vermelho}
+          icone={falha.resolvida ? 'checkmark-circle' : 'alert-circle'}
+        />
         <Text style={estilos.hora}>{formatarDataHora(falha.dataHora)}</Text>
       </View>
 
+      <Text style={estilos.codigo}>{falha.codigo}</Text>
       <Text style={estilos.descricao}>{falha.descricao}</Text>
 
       <View style={estilos.linha}>
-        <Text style={estilos.origem}>Origem: {falha.origem}</Text>
-        {falha.resolvida ? (
-          <Text style={estilos.resolvida}>Resolvida em {formatarDataHora(falha.resolvidaEm)}</Text>
-        ) : onResolver ? (
+        <Text style={estilos.origem}>Origem: {nomeSensor(falha.origem)}</Text>
+        {!falha.resolvida && onResolver ? (
           <Pressable
             onPress={() => onResolver(falha)}
             disabled={resolvendo}
             style={({ pressed }) => [estilos.botao, (pressed || resolvendo) && { opacity: 0.7 }]}
           >
-            {resolvendo ? (
-              <ActivityIndicator size="small" color={cores.texto} />
-            ) : (
-              <Text style={estilos.botaoTexto}>Resolver</Text>
-            )}
+            {resolvendo ? <ActivityIndicator size="small" color={cores.fundo} /> : <Text style={estilos.botaoTexto}>Resolver</Text>}
           </Pressable>
+        ) : onPress ? (
+          <Ionicons name="chevron-forward" size={18} color={cores.textoFraco} />
         ) : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -49,20 +67,19 @@ const estilos = StyleSheet.create({
     backgroundColor: cores.card,
     borderColor: cores.borda,
     borderWidth: 1,
-    borderLeftWidth: 5,
-    borderRadius: 12,
+    borderLeftWidth: 4,
+    borderRadius: raio.card,
     padding: 12,
-    gap: 8,
+    gap: 6,
     marginBottom: 10,
   },
-  linha: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
-  badge: { borderRadius: 6, paddingHorizontal: 8, paddingVertical: 2 },
-  badgeTexto: { color: '#0B1220', fontWeight: '700', fontSize: 11 },
-  codigo: { color: cores.texto, fontWeight: '700', flex: 1 },
-  hora: { color: cores.textoSecundario, fontSize: 12 },
-  descricao: { color: cores.texto, fontSize: 14 },
-  origem: { color: cores.textoSecundario, fontSize: 12 },
-  resolvida: { color: cores.ok, fontSize: 12, fontWeight: '600' },
-  botao: { backgroundColor: cores.primaria, borderRadius: 8, paddingVertical: 6, paddingHorizontal: 12, minWidth: 80, alignItems: 'center' },
-  botaoTexto: { color: cores.texto, fontWeight: '600', fontSize: 13 },
+  aberta: { backgroundColor: cores.cardElevado },
+  resolvida: { opacity: 0.7 },
+  linha: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  hora: { color: cores.textoSecundario, fontFamily: fontes.regular, fontSize: 11, marginLeft: 'auto' },
+  codigo: { color: cores.texto, fontFamily: fontes.titulo, fontSize: 15 },
+  descricao: { color: cores.texto, fontFamily: fontes.regular, fontSize: 13, lineHeight: 18 },
+  origem: { color: cores.textoSecundario, fontFamily: fontes.regular, fontSize: 12, flex: 1 },
+  botao: { backgroundColor: cores.ciano, borderRadius: raio.controle, paddingVertical: 7, paddingHorizontal: 12, minWidth: 84, alignItems: 'center' },
+  botaoTexto: { color: cores.fundo, fontFamily: fontes.seminegrito, fontSize: 13 },
 });
