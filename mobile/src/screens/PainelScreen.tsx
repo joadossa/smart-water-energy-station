@@ -1,116 +1,178 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { useApiConfig } from '../context/ApiConfigContext';
+import { useResumo } from '../context/ResumoContext';
 import usePolling from '../hooks/usePolling';
+import useAcoesCabecalho from '../hooks/useAcoesCabecalho';
 import AvisoApiOffline from '../components/AvisoApiOffline';
 import CardIndicador from '../components/CardIndicador';
-import AlertaItem from '../components/AlertaItem';
+import CartaoSecao from '../components/CartaoSecao';
 import Carregando from '../components/Carregando';
-import { cores } from '../theme/cores';
-import { formatarHora, formatarNumero, valorDoSensor } from '../utils/formatar';
+import EtiquetaStatus from '../components/EtiquetaStatus';
+import GraficoLinha from '../components/GraficoLinha';
+import MedidorCircular from '../components/MedidorCircular';
+import { comAlfa, cores, fontes, raio } from '../theme/cores';
+import { LIMITES_PADRAO } from '../types/api';
+import { nomeAtuador } from '../utils/atuadores';
+import { calcularTendencia, pontosDoSensor } from '../utils/estatistica';
+import { formatarHora, formatarInteiro, formatarNumero, nomeSensor, valorDoSensor } from '../utils/formatar';
+import { descreverTendencia, situacaoNivel } from '../utils/textos';
+import type { PropsAba } from '../navigation/tipos';
 
-export default function PainelScreen({ navigation }) {
+const RESERVATORIOS = ['RES-A', 'RES-B'];
+
+export default function PainelScreen({ navigation }: PropsAba<'Painel'>) {
   const { api } = useApiConfig();
-  const { dados, erro, carregando, ultimaAtualizacao, atualizar } = usePolling(() => api.buscarStatus(), {
-    intervaloMs: 5000,
+  const { definirFalhasAbertas } = useResumo();
+
+  const status = usePolling(() => api.buscarStatus(), { intervaloMs: 5000, chave: api.baseUrl });
+  const historicoVazao = usePolling(() => api.listarLeituras({ tipo: 'VAZAO', minutos: 15, limite: 500 }), {
+    intervaloMs: 15000,
     chave: api.baseUrl,
   });
+  const atualizarStatus = status.atualizar;
+  const atualizarHistorico = historicoVazao.atualizar;
   const [puxando, setPuxando] = useState(false);
+
+  const atualizarTudo = useCallback(async () => {
+    await Promise.all([atualizarStatus(), atualizarHistorico()]);
+  }, [atualizarStatus, atualizarHistorico]);
+
+  useAcoesCabecalho(atualizarTudo);
+
+  useEffect(() => {
+    if (status.dados) definirFalhasAbertas(status.dados.falhasAbertas);
+  }, [status.dados, definirFalhasAbertas]);
 
   async function puxarParaAtualizar() {
     setPuxando(true);
-    await atualizar();
+    await atualizarTudo();
     setPuxando(false);
   }
 
-  if (carregando && !dados && !erro) {
+  if (status.carregando && !status.dados && !status.erro) {
     return <Carregando mensagem="Conectando à estação..." />;
   }
 
-  const niveis = dados?.niveis ?? [];
-  const nivelMedio = niveis.length ? niveis.reduce((soma, l) => soma + l.valor, 0) / niveis.length : null;
-  const atuadores = dados?.atuadores ?? [];
-  const ligados = atuadores.filter((a) => a.estado === 'LIGADO').length;
-  const falhasAbertas = dados?.falhasAbertas ?? 0;
-  const online = Boolean(dados) && !erro;
+  const dados = status.dados;
+  const online = Boolean(dados) && !status.erro;
+  const limites = dados?.limites ?? LIMITES_PADRAO;
+  const capacidades = dados?.capacidadesLitros ?? {};
+  const bombas = (dados?.atuadores ?? []).filter((a) => a.tipo === 'BOMBA');
+  const bombasLigadas = bombas.filter((b) => b.estado === 'LIGADO').length;
+  const falhaRecente = dados?.ultimasFalhas?.[0];
+  const pontosSaida = pontosDoSensor(historicoVazao.dados, 'SAIDA');
+  const pontosEntrada = pontosDoSensor(historicoVazao.dados, 'ENTRADA');
+  const tendenciaSaida = calcularTendencia(pontosSaida);
 
   return (
     <ScrollView
       style={estilos.tela}
       contentContainerStyle={estilos.conteudo}
-      refreshControl={<RefreshControl refreshing={puxando} onRefresh={puxarParaAtualizar} tintColor={cores.texto} />}
+      refreshControl={<RefreshControl refreshing={puxando} onRefresh={puxarParaAtualizar} tintColor={cores.ciano} colors={[cores.ciano]} />}
     >
-      <View style={estilos.cabecalho}>
-        <Text style={estilos.titulo}>Smart Water & Energy Station</Text>
-        <View style={estilos.statusLinha}>
-          <View style={[estilos.ponto, { backgroundColor: online ? cores.ok : cores.critico }]} />
-          <Text style={estilos.statusTexto}>
-            {online ? `Online · atualizado às ${formatarHora(ultimaAtualizacao)}` : 'Sem conexão com a API'}
+      <View style={estilos.conexao}>
+        <View style={[estilos.ponto, { backgroundColor: online ? cores.verde : cores.vermelho }]} />
+        <View style={estilos.conexaoTextos}>
+          <Text style={estilos.conexaoTitulo}>{online ? 'Estação online' : 'API fora do ar'}</Text>
+          <Text style={estilos.conexaoHora}>
+            {status.ultimaAtualizacao
+              ? `${online ? 'Atualizado' : 'Última leitura disponível'} às ${formatarHora(status.ultimaAtualizacao)}`
+              : 'Nenhuma leitura recebida ainda'}
           </Text>
         </View>
+        {dados?.simulacaoAtiva ? <EtiquetaStatus texto="Dados simulados" cor={cores.azul} icone="flask-outline" /> : null}
       </View>
 
-      <AvisoApiOffline erro={erro} ultimaAtualizacao={ultimaAtualizacao} onTentarNovamente={atualizar} />
+      <AvisoApiOffline erro={status.erro} ultimaAtualizacao={status.ultimaAtualizacao} onTentarNovamente={atualizarTudo} />
+
+      {dados && dados.falhasAbertas > 0 && falhaRecente ? (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => navigation.navigate('Alertas')}
+          style={({ pressed }) => [estilos.bannerFalha, pressed && { opacity: 0.8 }]}
+        >
+          <Ionicons name="warning" size={20} color={cores.vermelho} />
+          <Text style={estilos.bannerTexto}>
+            {dados.falhasAbertas} {dados.falhasAbertas > 1 ? 'falhas abertas' : 'falha aberta'} · {nomeSensor(falhaRecente.origem)}:{' '}
+            {falhaRecente.descricao}
+          </Text>
+          <Ionicons name="chevron-forward" size={18} color={cores.vermelho} />
+        </Pressable>
+      ) : null}
 
       {dados ? (
         <>
-          <View style={estilos.grade}>
+          <View style={estilos.linha}>
+            {RESERVATORIOS.map((sensor) => {
+              const valor = valorDoSensor(dados.niveis, sensor);
+              const situacao = situacaoNivel(valor, limites);
+              const capacidade = capacidades[sensor];
+              return (
+                <View key={sensor} style={estilos.cardReservatorio}>
+                  <Text style={estilos.nomeReservatorio}>{nomeSensor(sensor)}</Text>
+                  <MedidorCircular
+                    percentual={valor}
+                    cor={situacao.cor}
+                    tamanho={112}
+                    legenda={capacidade && valor !== null ? `${formatarInteiro((capacidade * valor) / 100)} L` : undefined}
+                  />
+                  <EtiquetaStatus texto={situacao.texto} cor={situacao.cor} icone={situacao.icone} style={{ alignSelf: 'center' }} />
+                </View>
+              );
+            })}
+          </View>
+
+          <View style={estilos.linha}>
             <CardIndicador
-              titulo="Nível médio"
-              valor={formatarNumero(nivelMedio)}
-              unidade="%"
-              icone="water-outline"
-              cor={cores.agua}
-              subtitulo={`${niveis.length} reservatório(s)`}
-            />
-            <CardIndicador
-              titulo="Vazão de entrada"
-              valor={formatarNumero(valorDoSensor(dados.vazoes, 'ENTRADA'))}
-              unidade="L/min"
-              icone="arrow-down-circle-outline"
-              cor={cores.agua}
-            />
-            <CardIndicador
-              titulo="Vazão de saída"
+              titulo="Vazão atual"
               valor={formatarNumero(valorDoSensor(dados.vazoes, 'SAIDA'))}
               unidade="L/min"
-              icone="arrow-up-circle-outline"
-              cor={cores.agua}
+              icone="water-outline"
+              cor={cores.ciano}
+              subtitulo={`Entrada: ${formatarNumero(valorDoSensor(dados.vazoes, 'ENTRADA'))} L/min`}
             />
             <CardIndicador
               titulo="Consumo elétrico"
-              valor={formatarNumero(dados.consumoTotalKw, 2)}
+              valor={formatarNumero(dados.consumoTotalKw)}
               unidade="kW"
               icone="flash-outline"
-              cor={cores.energia}
-              subtitulo="simulado"
-            />
-            <CardIndicador
-              titulo="Falhas abertas"
-              valor={String(falhasAbertas)}
-              icone="warning-outline"
-              cor={falhasAbertas > 0 ? cores.critico : cores.ok}
-            />
-            <CardIndicador
-              titulo="Atuadores ligados"
-              valor={`${ligados}/${atuadores.length}`}
-              icone="cog-outline"
-              cor={cores.primaria}
+              cor={cores.amarelo}
+              subtitulo={dados.simulacaoAtiva ? 'Potência simulada' : 'Potência instantânea'}
             />
           </View>
 
-          <Text style={estilos.secao}>Últimos alertas</Text>
-          {dados.ultimasFalhas?.length ? (
-            dados.ultimasFalhas.slice(0, 3).map((falha) => <AlertaItem key={falha.id} falha={falha} />)
-          ) : (
-            <Text style={estilos.vazio}>Nenhuma falha aberta. Tudo operando normalmente.</Text>
-          )}
-          {falhasAbertas > 0 ? (
-            <Pressable onPress={() => navigation.navigate('Alertas')}>
-              <Text style={estilos.link}>Ver todos os alertas →</Text>
-            </Pressable>
-          ) : null}
+          <CartaoSecao
+            titulo="Bombas"
+            subtitulo={`${bombasLigadas} de ${bombas.length} ${bombasLigadas === 1 ? 'ligada' : 'ligadas'}`}
+            acao={{ rotulo: 'Controlar', onPress: () => navigation.navigate('Energia') }}
+          >
+            <View style={estilos.bombas}>
+              {bombas.map((bomba) => {
+                const ligada = bomba.estado === 'LIGADO';
+                return (
+                  <View key={bomba.id} style={estilos.bomba}>
+                    <Ionicons name="cog-outline" size={20} color={ligada ? cores.verde : cores.textoFraco} />
+                    <Text style={estilos.bombaNome}>{nomeAtuador(bomba)}</Text>
+                    <EtiquetaStatus texto={ligada ? 'Ligada' : 'Desligada'} cor={ligada ? cores.verde : cores.textoFraco} />
+                  </View>
+                );
+              })}
+            </View>
+          </CartaoSecao>
+
+          <CartaoSecao titulo="Vazão · últimos 15 min" subtitulo={descreverTendencia(tendenciaSaida, 'L/min', 'Tendência da saída')}>
+            <GraficoLinha
+              series={[
+                { nome: 'Saída', cor: cores.ciano, pontos: pontosSaida },
+                { nome: 'Entrada', cor: cores.azul, pontos: pontosEntrada },
+              ]}
+              altura={150}
+              mensagemVazio={historicoVazao.erro ? 'Histórico indisponível enquanto a API estiver fora do ar.' : 'Aguardando leituras de vazão...'}
+            />
+          </CartaoSecao>
         </>
       ) : null}
     </ScrollView>
@@ -119,14 +181,36 @@ export default function PainelScreen({ navigation }) {
 
 const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
-  conteudo: { padding: 16, paddingBottom: 32 },
-  cabecalho: { marginBottom: 12, gap: 6 },
-  titulo: { color: cores.texto, fontSize: 20, fontWeight: '700' },
-  statusLinha: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  conteudo: { padding: 16, paddingBottom: 32, gap: 12 },
+  conexao: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   ponto: { width: 10, height: 10, borderRadius: 5 },
-  statusTexto: { color: cores.textoSecundario, fontSize: 13 },
-  grade: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  secao: { color: cores.texto, fontSize: 16, fontWeight: '700', marginTop: 20, marginBottom: 10 },
-  vazio: { color: cores.textoSecundario, fontStyle: 'italic' },
-  link: { color: cores.primaria, fontWeight: '600', marginTop: 4 },
+  conexaoTextos: { flex: 1 },
+  conexaoTitulo: { color: cores.texto, fontFamily: fontes.seminegrito, fontSize: 14 },
+  conexaoHora: { color: cores.textoSecundario, fontFamily: fontes.regular, fontSize: 12 },
+  bannerFalha: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: comAlfa(cores.vermelho, 0.12),
+    borderColor: comAlfa(cores.vermelho, 0.6),
+    borderWidth: 1,
+    borderRadius: raio.card,
+    padding: 12,
+  },
+  bannerTexto: { flex: 1, color: cores.texto, fontFamily: fontes.media, fontSize: 13, lineHeight: 18 },
+  linha: { flexDirection: 'row', gap: 12 },
+  cardReservatorio: {
+    flex: 1,
+    backgroundColor: cores.card,
+    borderColor: cores.borda,
+    borderWidth: 1,
+    borderRadius: raio.card,
+    padding: 12,
+    alignItems: 'center',
+    gap: 8,
+  },
+  nomeReservatorio: { color: cores.texto, fontFamily: fontes.seminegrito, fontSize: 13, alignSelf: 'flex-start' },
+  bombas: { gap: 8 },
+  bomba: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  bombaNome: { flex: 1, color: cores.texto, fontFamily: fontes.media, fontSize: 14 },
 });
