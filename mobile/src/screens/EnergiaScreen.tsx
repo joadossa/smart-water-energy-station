@@ -1,156 +1,204 @@
-import React from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useApiConfig } from '../context/ApiConfigContext';
+import { useResumo } from '../context/ResumoContext';
 import usePolling from '../hooks/usePolling';
+import useAcoesCabecalho from '../hooks/useAcoesCabecalho';
+import useAcionamentoAtuador from '../hooks/useAcionamentoAtuador';
 import AvisoApiOffline from '../components/AvisoApiOffline';
-import CardIndicador from '../components/CardIndicador';
+import BotaoAtuador from '../components/BotaoAtuador';
+import CartaoSecao from '../components/CartaoSecao';
 import Carregando from '../components/Carregando';
-import { cores } from '../theme/cores';
-import { formatarNumero, nomeSensor } from '../utils/formatar';
+import ConfirmacaoModal from '../components/ConfirmacaoModal';
+import EtiquetaStatus from '../components/EtiquetaStatus';
+import GraficoLinha from '../components/GraficoLinha';
+import MensagemResultado from '../components/MensagemResultado';
+import { comAlfa, cores, fontes, raio } from '../theme/cores';
+import { LIMITES_PADRAO } from '../types/api';
+import { acaoPara, descreverEstado, nomeAtuador } from '../utils/atuadores';
+import { calcularTendencia, integrarEnergiaKwh, somarPorInstante } from '../utils/estatistica';
+import { formatarHora, formatarNumero, nomeSensor, paraData } from '../utils/formatar';
+import { descreverTendencia } from '../utils/textos';
 
-// Tarifa ilustrativa usada só para estimar o custo da simulação
-const TARIFA_KWH = 0.8;
-const LIMITE_CONSUMO_KW = 15;
-
-/** Agrupa as leituras (mais recentes primeiro) por sensor, em ordem cronológica. */
-function agruparHistorico(leituras) {
-  const grupos = {};
-  [...(leituras || [])].reverse().forEach((leitura) => {
-    if (!grupos[leitura.sensor]) grupos[leitura.sensor] = [];
-    grupos[leitura.sensor].push(leitura.valor);
-  });
-  Object.keys(grupos).forEach((sensor) => {
-    grupos[sensor] = grupos[sensor].slice(-20);
-  });
-  return grupos;
-}
-
-function MiniGrafico({ valores }) {
-  const maximo = Math.max(...valores, 0.01);
-  return (
-    <View style={estilos.grafico}>
-      {valores.map((valor, i) => (
-        <View
-          key={i}
-          style={[
-            estilos.barra,
-            {
-              height: `${Math.max(3, (valor / maximo) * 100)}%`,
-              backgroundColor: valor > LIMITE_CONSUMO_KW ? cores.critico : cores.energia,
-            },
-          ]}
-        />
-      ))}
-    </View>
-  );
-}
+const JANELA_MINUTOS = 30;
 
 export default function EnergiaScreen() {
   const { api } = useApiConfig();
+  const { definirFalhasAbertas } = useResumo();
+
   const status = usePolling(() => api.buscarStatus(), { intervaloMs: 5000, chave: api.baseUrl });
-  const historico = usePolling(() => api.listarLeituras({ tipo: 'ENERGIA', limite: 60 }), {
-    intervaloMs: 10000,
+  const historico = usePolling(() => api.listarLeituras({ tipo: 'ENERGIA', minutos: JANELA_MINUTOS, limite: 1000 }), {
+    intervaloMs: 15000,
     chave: api.baseUrl,
   });
+  const atualizarStatus = status.atualizar;
+  const atualizarHistorico = historico.atualizar;
+  const [puxando, setPuxando] = useState(false);
+
+  const atualizarTudo = useCallback(async () => {
+    await Promise.all([atualizarStatus(), atualizarHistorico()]);
+  }, [atualizarStatus, atualizarHistorico]);
+
+  useAcoesCabecalho(atualizarTudo);
+  const acionamento = useAcionamentoAtuador(api, atualizarTudo);
+
+  useEffect(() => {
+    if (status.dados) definirFalhasAbertas(status.dados.falhasAbertas);
+  }, [status.dados, definirFalhasAbertas]);
+
+  async function puxarParaAtualizar() {
+    setPuxando(true);
+    await atualizarTudo();
+    setPuxando(false);
+  }
 
   if (status.carregando && !status.dados && !status.erro) {
     return <Carregando mensagem="Carregando consumo elétrico..." />;
   }
 
-  const consumos = status.dados?.consumos ?? [];
-  const total = status.dados?.consumoTotalKw ?? null;
-  const porSensor = agruparHistorico(historico.dados);
-  const erro = status.erro || historico.erro;
-
-  function tentarNovamente() {
-    status.atualizar();
-    historico.atualizar();
-  }
+  const dados = status.dados;
+  const limites = dados?.limites ?? LIMITES_PADRAO;
+  const consumos = dados?.consumos ?? [];
+  const total = dados ? dados.consumoTotalKw : null;
+  const bombas = (dados?.atuadores ?? []).filter((a) => a.tipo === 'BOMBA');
+  const pontosPotencia = somarPorInstante(historico.dados);
+  const energia = integrarEnergiaKwh(pontosPotencia);
+  const tendencia = calcularTendencia(pontosPotencia, 0.05);
+  const horaLeitura = consumos
+    .map((l) => paraData(l.dataHora))
+    .filter((d): d is Date => d !== null)
+    .sort((a, b) => b.getTime() - a.getTime())[0];
+  const pedido = acionamento.pedido;
 
   return (
-    <ScrollView style={estilos.tela} contentContainerStyle={estilos.conteudo}>
-      <AvisoApiOffline erro={erro} ultimaAtualizacao={status.ultimaAtualizacao} onTentarNovamente={tentarNovamente} />
+    <>
+      <ScrollView
+        style={estilos.tela}
+        contentContainerStyle={estilos.conteudo}
+        refreshControl={<RefreshControl refreshing={puxando} onRefresh={puxarParaAtualizar} tintColor={cores.ciano} colors={[cores.ciano]} />}
+      >
+        <AvisoApiOffline erro={status.erro} ultimaAtualizacao={status.ultimaAtualizacao} onTentarNovamente={atualizarTudo} />
 
-      <View style={estilos.destaque}>
-        <Text style={estilos.destaqueRotulo}>Consumo elétrico total (simulado)</Text>
-        <Text style={estilos.destaqueValor}>
-          {formatarNumero(total, 2)} <Text style={estilos.destaqueUnidade}>kW</Text>
-        </Text>
-        <Text style={estilos.destaqueInfo}>
-          ≈ {formatarNumero(total, 2)} kWh por hora de operação · R$ {formatarNumero(total === null ? null : total * TARIFA_KWH, 2)}/h
-        </Text>
-      </View>
-
-      <Text style={estilos.secao}>Consumo por equipamento</Text>
-      {consumos.length ? (
-        <View style={estilos.grade}>
-          {consumos.map((leitura) => (
-            <CardIndicador
-              key={leitura.sensor}
-              titulo={nomeSensor(leitura.sensor)}
-              valor={formatarNumero(leitura.valor, 2)}
-              unidade="kW"
-              icone="flash-outline"
-              cor={leitura.valor > LIMITE_CONSUMO_KW ? cores.critico : cores.energia}
-              subtitulo={total ? `${formatarNumero((leitura.valor / total) * 100, 0)}% do total` : 'sem consumo'}
-            />
-          ))}
-        </View>
-      ) : (
-        <Text style={estilos.vazio}>Sem leituras de consumo ainda.</Text>
-      )}
-
-      <Text style={estilos.secao}>Histórico recente</Text>
-      {Object.keys(porSensor).length ? (
-        Object.entries(porSensor).map(([sensor, valores]) => (
-          <View key={sensor} style={estilos.cardGrafico}>
-            <View style={estilos.linha}>
-              <Text style={estilos.nomeGrafico}>{nomeSensor(sensor)}</Text>
-              <Text style={estilos.valorGrafico}>máx. {formatarNumero(Math.max(...valores), 2)} kW</Text>
-            </View>
-            <MiniGrafico valores={valores} />
+        <View style={estilos.destaques}>
+          <View style={[estilos.destaque, { borderColor: comAlfa(cores.amarelo, 0.5) }]}>
+            <Text style={estilos.destaqueRotulo}>Potência instantânea</Text>
+            <Text style={estilos.destaqueValor}>
+              {formatarNumero(total, 2)}
+              <Text style={estilos.destaqueUnidade}> kW</Text>
+            </Text>
+            <Text style={estilos.destaqueInfo}>{horaLeitura ? `Leitura às ${formatarHora(horaLeitura)}` : 'Sem leitura ainda'}</Text>
+            {dados?.simulacaoAtiva ? <EtiquetaStatus texto="Valor simulado" cor={cores.azul} icone="flask-outline" /> : null}
           </View>
-        ))
-      ) : (
-        <Text style={estilos.vazio}>Sem histórico de consumo ainda.</Text>
-      )}
-      <Text style={estilos.legenda}>Barras em vermelho: consumo acima de {LIMITE_CONSUMO_KW} kW (sobrecarga).</Text>
-    </ScrollView>
+
+          <View style={[estilos.destaque, { borderColor: comAlfa(cores.ciano, 0.5) }]}>
+            <Text style={estilos.destaqueRotulo}>Energia estimada</Text>
+            <Text style={[estilos.destaqueValor, { color: cores.ciano }]}>
+              {energia.duracaoMinutos > 0 ? `≈ ${formatarNumero(energia.kwh, 2)}` : '--'}
+              <Text style={estilos.destaqueUnidade}> kWh</Text>
+            </Text>
+            <Text style={estilos.destaqueInfo}>
+              {energia.duracaoMinutos > 0 ? `em ${formatarNumero(energia.duracaoMinutos, 0)} min de leituras` : 'Aguardando histórico'}
+            </Text>
+            <EtiquetaStatus texto="Estimativa simulada" cor={cores.textoSecundario} icone="calculator-outline" />
+          </View>
+        </View>
+
+        <Text style={estilos.nota}>
+          kW é a potência no instante da leitura; kWh é a energia acumulada no período, estimada integrando a potência ao longo do tempo
+          (regra dos trapézios) com as leituras dos últimos {JANELA_MINUTOS} min.
+        </Text>
+
+        <CartaoSecao titulo={`Potência total · últimos ${JANELA_MINUTOS} min`} subtitulo={descreverTendencia(tendencia, 'kW')}>
+          <GraficoLinha
+            series={[{ nome: 'Potência total', cor: cores.amarelo, pontos: pontosPotencia }]}
+            altura={150}
+            casas={1}
+            mensagemVazio={historico.erro ? 'Histórico indisponível com a API fora do ar.' : 'Aguardando leituras de consumo...'}
+          />
+        </CartaoSecao>
+
+        <CartaoSecao
+          titulo="Bombas"
+          subtitulo={`${bombas.filter((b) => b.estado === 'LIGADO').length} de ${bombas.length} ligadas · confirmação antes de cada comando`}
+        >
+          <MensagemResultado resultado={acionamento.resultado} onFechar={acionamento.limparResultado} />
+          {bombas.length ? (
+            bombas.map((bomba) => (
+              <BotaoAtuador
+                key={bomba.id}
+                atuador={bomba}
+                onAlternar={status.erro ? null : acionamento.solicitar}
+                ocupado={acionamento.executando && pedido?.atuador.id === bomba.id}
+              />
+            ))
+          ) : (
+            <Text style={estilos.vazio}>Nenhuma bomba cadastrada.</Text>
+          )}
+          {status.erro ? <Text style={estilos.vazio}>Comandos desabilitados enquanto a API estiver fora do ar.</Text> : null}
+        </CartaoSecao>
+
+        <CartaoSecao titulo="Consumo por equipamento" subtitulo={`Limite por equipamento: ${formatarNumero(limites.consumoMaximo, 0)} kW`}>
+          {consumos.length ? (
+            consumos.map((leitura) => {
+              const acimaDoLimite = leitura.valor > limites.consumoMaximo;
+              const participacao = total ? (leitura.valor / total) * 100 : 0;
+              const cor = acimaDoLimite ? cores.vermelho : cores.amarelo;
+              return (
+                <View key={leitura.sensor} style={estilos.equipamento}>
+                  <View style={estilos.equipamentoLinha}>
+                    <Text style={estilos.equipamentoNome}>{nomeSensor(leitura.sensor)}</Text>
+                    <Text style={[estilos.equipamentoValor, { color: cor }]}>{formatarNumero(leitura.valor, 2)} kW</Text>
+                  </View>
+                  <View style={estilos.trilho}>
+                    <View style={[estilos.barra, { width: `${Math.min(100, Math.max(0, participacao))}%`, backgroundColor: cor }]} />
+                  </View>
+                  <Text style={estilos.equipamentoInfo}>
+                    {formatarNumero(participacao, 0)}% do total{acimaDoLimite ? ' · acima do limite (sobrecarga)' : ''}
+                  </Text>
+                </View>
+              );
+            })
+          ) : (
+            <Text style={estilos.vazio}>Sem leituras de consumo ainda.</Text>
+          )}
+        </CartaoSecao>
+      </ScrollView>
+
+      <ConfirmacaoModal
+        visivel={pedido !== null}
+        titulo={pedido ? `${acaoPara(pedido.atuador, pedido.novoEstado)} ${nomeAtuador(pedido.atuador).toLowerCase()}?` : ''}
+        mensagem={
+          pedido
+            ? `O comando será enviado ao servidor. A ${nomeAtuador(pedido.atuador).toLowerCase()} ficará ${descreverEstado(pedido.atuador, pedido.novoEstado)} somente após a confirmação da API.`
+            : ''
+        }
+        textoConfirmar={pedido ? acaoPara(pedido.atuador, pedido.novoEstado) : 'Confirmar'}
+        corConfirmar={pedido?.novoEstado === 'DESLIGADO' ? cores.laranja : cores.ciano}
+        carregando={acionamento.executando}
+        onConfirmar={() => void acionamento.confirmar()}
+        onCancelar={acionamento.cancelar}
+      />
+    </>
   );
 }
 
 const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
-  conteudo: { padding: 16, paddingBottom: 32 },
-  destaque: {
-    backgroundColor: cores.card,
-    borderColor: cores.energia,
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    gap: 4,
-  },
-  destaqueRotulo: { color: cores.textoSecundario, fontSize: 13 },
-  destaqueValor: { color: cores.energia, fontSize: 40, fontWeight: '800' },
-  destaqueUnidade: { fontSize: 18, color: cores.textoSecundario, fontWeight: '600' },
-  destaqueInfo: { color: cores.textoSecundario, fontSize: 12 },
-  secao: { color: cores.texto, fontSize: 16, fontWeight: '700', marginTop: 20, marginBottom: 10 },
-  grade: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  vazio: { color: cores.textoSecundario, fontStyle: 'italic' },
-  cardGrafico: {
-    backgroundColor: cores.card,
-    borderColor: cores.borda,
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-    gap: 8,
-  },
-  linha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  nomeGrafico: { color: cores.texto, fontWeight: '600' },
-  valorGrafico: { color: cores.textoSecundario, fontSize: 12 },
-  grafico: { height: 60, flexDirection: 'row', alignItems: 'flex-end', gap: 3 },
-  barra: { flex: 1, borderTopLeftRadius: 3, borderTopRightRadius: 3 },
-  legenda: { color: cores.textoSecundario, fontSize: 11, marginTop: 4 },
+  conteudo: { padding: 16, paddingBottom: 32, gap: 12 },
+  destaques: { flexDirection: 'row', gap: 12 },
+  destaque: { flex: 1, backgroundColor: cores.card, borderWidth: 1, borderRadius: raio.card, padding: 14, gap: 6 },
+  destaqueRotulo: { color: cores.textoSecundario, fontFamily: fontes.media, fontSize: 12 },
+  destaqueValor: { color: cores.amarelo, fontFamily: fontes.titulo, fontSize: 30 },
+  destaqueUnidade: { color: cores.textoSecundario, fontFamily: fontes.media, fontSize: 14 },
+  destaqueInfo: { color: cores.textoSecundario, fontFamily: fontes.regular, fontSize: 11 },
+  nota: { color: cores.textoFraco, fontFamily: fontes.regular, fontSize: 11, lineHeight: 16 },
+  equipamento: { gap: 4, paddingVertical: 6 },
+  equipamentoLinha: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  equipamentoNome: { color: cores.texto, fontFamily: fontes.media, fontSize: 14 },
+  equipamentoValor: { fontFamily: fontes.titulo, fontSize: 15 },
+  trilho: { height: 6, borderRadius: 3, backgroundColor: cores.borda, overflow: 'hidden' },
+  barra: { height: 6, borderRadius: 3 },
+  equipamentoInfo: { color: cores.textoSecundario, fontFamily: fontes.regular, fontSize: 11 },
+  vazio: { color: cores.textoSecundario, fontFamily: fontes.regular, fontStyle: 'italic', fontSize: 12 },
 });
