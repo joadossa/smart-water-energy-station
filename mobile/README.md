@@ -1,6 +1,6 @@
 # Smart Water & Energy Station — App Mobile
 
-App em **React Native com Expo** que funciona como o **painel de operação** da Smart Water & Energy Station. Ele consome a API REST do backend Spring Boot e mostra níveis, vazão, consumo elétrico simulado e alertas de falha.
+App em **React Native com Expo e TypeScript** que funciona como o **painel de operação** da Smart Water & Energy Station, no visual **Industrial Dark**. Ele consome a API REST do backend Spring Boot (dados reais, nada fixo no app) e mostra níveis, vazão, consumo elétrico simulado, bombas e alertas de falha.
 
 Disciplina: **Advanced Programming and Mobile Dev** — Global Solution 2026.2 (FIAP)
 
@@ -9,32 +9,29 @@ Disciplina: **Advanced Programming and Mobile Dev** — Global Solution 2026.2 (
 | Nome completo | RM |
 |---|---|
 | João Victor Pereira | 550306 |
+| *(integrante 2 — preencher)* | *(RM)* |
+| *(integrante 3 — preencher)* | *(RM)* |
 
 ## Telas
 
-| Aba | O que mostra |
+| Tela | Conteúdo |
 |---|---|
-| **Painel** | Visão geral: nível médio, vazão de entrada/saída, consumo total, falhas abertas, atuadores ligados e últimos alertas |
-| **Água** | Nível de cada reservatório (barra com limites), vazões e botões para ligar/desligar bombas e abrir/fechar a válvula |
-| **Energia** | Consumo elétrico simulado total e por equipamento, custo estimado e histórico recente em barras |
-| **Alertas** | Falhas filtradas por Abertas / Todas / Resolvidas, com severidade, origem e botão **Resolver** |
-| **Config** | Endereço da API (salvo no aparelho), teste de conexão e restauração do padrão |
+| **Painel** | Cabeçalho com gota, título e botão ↻. Estado "Estação online" / "API fora do ar" com horário. Banner clicável da falha aberta. Medidores circulares dos reservatórios A e B. Vazão atual e consumo elétrico. Bombas ("1 de 2 ligada"). Gráfico de vazão dos últimos 15 min com tendência por regressão linear |
+| **Água** | Volume em litros sobre a capacidade (configurada no backend), estado, última leitura, mensagens de nível crítico, histórico de 30 min com linhas de mínimo/máximo, vazões e comando da válvula |
+| **Energia** | Potência instantânea (kW), gráfico de 30 min, energia estimada em **kWh** (integração potência × tempo, marcada como estimativa simulada), consumo por equipamento e ligar/desligar bombas com confirmação |
+| **Alertas** | Falhas com origem, descrição, severidade, horário e estado; abertas em destaque; filtro Abertas/Todas/Resolvidas; toque para os detalhes |
+| **Detalhe da falha** | Todos os campos da falha e botão para resolvê-la (`PATCH /api/falhas/{id}/resolver`) |
+| **Configurações** (engrenagem) | Endereço da API, teste de conexão e dicas para celular, emulador e navegador |
 
-## Padrões utilizados
+A barra inferior tem **Painel, Água, Energia e Alertas**, com indicador da aba ativa e **contador de falhas abertas**.
 
-- **Componentes** reutilizáveis em `src/components` (CardIndicador, BarraNivel, AlertaItem, BotaoAtuador, AvisoApiOffline)
-- **Navegação** com React Navigation (bottom tabs) em `src/navigation/AppNavigator.js`
-- **Consumo de dados** com `fetch` em `src/api`. O hook `usePolling` atualiza as telas a cada poucos segundos
-- **Estado global** da URL da API com Context API (`src/context/ApiConfigContext.js`) + AsyncStorage
+## Integração com a API
 
-### Tratamento de API indisponível
-
-Toda chamada tem **timeout de 5 s**. Se o backend estiver parado ou inacessível:
-
-- a tela **não trava nem fica em branco**: continua mostrando os últimos dados recebidos;
-- aparece o aviso **"API fora do ar"**, com o horário dos últimos dados e o botão **Tentar agora**;
-- o app continua tentando reconectar sozinho e volta ao normal quando a API retorna;
-- os botões de ação (acionar bomba, resolver falha) ficam desabilitados enquanto a API estiver fora.
+- Os dados são buscados ao abrir a tela, pelo botão ↻, ao puxar a tela para baixo e periodicamente (5 a 15 s). Os timers param ao sair da tela (`usePolling` + `useIsFocused`).
+- Toda chamada tem **timeout de 5 s** (`src/api/client.ts`). Erros de rede viram `ApiError` com `offline = true`.
+- **API fora do ar:** o app não trava. Mostra o aviso, identifica os valores como **"última leitura disponível"** com o horário, sem fingir tempo real, e desabilita os comandos.
+- **Comandos de bomba/válvula:** confirmação → `PUT /api/atuadores/{id}` → nova consulta `GET /api/atuadores/{id}`. Só aparece "confirmado pelo servidor" se o estado retornado for o pedido. Erros nunca são mostrados como sucesso.
+- Limites de alerta e capacidades vêm do `GET /api/status`, então cores e mensagens seguem as mesmas regras do backend.
 
 ## Como executar
 
@@ -43,39 +40,46 @@ Pré-requisitos: **Node.js 22+** e o backend rodando (veja [../backend/README.md
 ```bash
 cd mobile
 npm install
-npx expo start
+npx expo start      # QR code para o Expo Go | w = navegador | a = emulador Android
 ```
 
-- **Celular:** instale o **Expo Go** (Play Store / App Store) e leia o QR code exibido no terminal.
-- **Navegador:** `npx expo start --web` (ou aperte `w` no terminal do Expo).
+Checagem de tipos: `npx tsc --noEmit`
 
 ### Endereço da API
 
-O app tenta descobrir sozinho o endereço do backend:
+Fica centralizado em `src/context/ApiConfigContext.tsx`. A ordem de prioridade é:
+1. `EXPO_PUBLIC_API_URL` no arquivo `mobile/.env` (copie de `.env.example`);
+2. o IP do computador que está servindo o Expo, na porta 8080;
+3. `http://localhost:8080`.
 
-1. `EXPO_PUBLIC_API_URL`, se existir um arquivo `mobile/.env` (veja `.env.example`);
-2. o mesmo IP do computador que está servindo o app pelo Expo, na porta 8080;
-3. `http://localhost:8080` (navegador no próprio computador).
+Para alterar no app: **engrenagem → Configurações → Testar conexão → Salvar**.
 
-Se precisar, ajuste na aba **Config**, toque em **Testar conexão** e depois em **Salvar**:
-
-- no celular: `http://<IP-do-computador>:8080`, por exemplo `http://192.168.0.10:8080`. No Windows, o IP aparece em `ipconfig`, no adaptador Wi-Fi;
-- no navegador do computador: `http://localhost:8080`.
-
-Celular e computador precisam estar na **mesma rede Wi-Fi**.
+| Onde o app roda | Endereço |
+|---|---|
+| Navegador no computador / simulador iOS | `http://localhost:8080` |
+| Emulador Android | `http://10.0.2.2:8080` |
+| Celular físico (mesma rede Wi-Fi) | `http://<IP-do-computador>:8080` |
 
 ## Estrutura
 
 ```
 mobile/
-├── App.js                      # providers + navegação
+├── App.tsx                      # fontes, providers e navegação
+├── .env.example                 # EXPO_PUBLIC_API_URL (opcional)
 └── src/
-    ├── api/          client.js (fetch + timeout + ApiError), estacaoApi.js (endpoints)
-    ├── components/   componentes visuais reutilizáveis
-    ├── context/      ApiConfigContext (URL da API)
-    ├── hooks/        usePolling (atualização automática)
-    ├── navigation/   AppNavigator (abas)
-    ├── screens/      Painel, Água, Energia, Alertas, Config
-    ├── theme/        cores
-    └── utils/        formatação de datas, números e sensores
+    ├── api/          client.ts (fetch + timeout + ApiError), estacaoApi.ts (endpoints tipados)
+    ├── components/   MedidorCircular, GraficoLinha, BotaoAtuador, AlertaItem, ConfirmacaoModal, ...
+    ├── context/      ApiConfigContext (URL da API), ResumoContext (contador de alertas)
+    ├── hooks/        usePolling, useAcionamentoAtuador, useAcoesCabecalho
+    ├── navigation/   AppNavigator (pilha + abas) e tipos das rotas
+    ├── screens/      Painel, Água, Energia, Alertas, DetalheFalha, Config
+    ├── theme/        paleta Industrial Dark e fontes
+    ├── types/        tipos dos dados da API
+    └── utils/        formatação, tendência (regressão linear), kWh (trapézios) e textos
 ```
+
+## Visual
+
+- Paleta: fundo `#0B1220`, cartões `#111C2E`, ciano `#16D9E3`, azul `#648CFF`, verde `#22C55E`, amarelo `#F5B942`, vermelho `#F26464`, texto `#F8FAFC` / `#A8B4C8`
+- Fontes: **Inter** (texto) e **Fira Sans** (títulos e números), via `@expo-google-fonts`
+- Medidores e gráficos em SVG (`react-native-svg`)
