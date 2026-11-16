@@ -1,0 +1,112 @@
+# =============================================================
+# Smart Water & Energy Station - exemplos de requisições
+# Use com a extensão "REST Client" do VS Code (clique em "Send Request")
+# ou copie para o Postman/Insomnia.
+# =============================================================
+@api = http://localhost:8080/api
+
+### Status geral (resumo usado pelo painel do app)
+GET {{api}}/status
+
+### ---------------- LEITURAS ----------------
+
+### Registrar leitura de nível (%)
+POST {{api}}/leituras
+Content-Type: application/json
+
+{
+  "tipo": "NIVEL",
+  "sensor": "RES-A",
+  "valor": 72.5
+}
+
+### Registrar leitura de vazão (L/min)
+POST {{api}}/leituras
+Content-Type: application/json
+
+{
+  "tipo": "VAZAO",
+  "sensor": "ENTRADA",
+  "valor": 41.8
+}
+
+### Registrar leitura de consumo elétrico (kW) - acima do limite: abre falha SOBRECARGA
+POST {{api}}/leituras
+Content-Type: application/json
+
+{
+  "tipo": "ENERGIA",
+  "sensor": "BOMBA-01",
+  "valor": 17.3
+}
+
+### Registrar nível baixo - abre falha NIVEL_BAIXO automaticamente
+POST {{api}}/leituras
+Content-Type: application/json
+
+{
+  "tipo": "NIVEL",
+  "sensor": "RES-B",
+  "valor": 12
+}
+
+### Leitura inválida - retorna 400 com os campos inválidos
+POST {{api}}/leituras
+Content-Type: application/json
+
+{
+  "tipo": "NIVEL",
+  "valor": -5
+}
+
+### Listar as 20 leituras mais recentes
+GET {{api}}/leituras?limite=20
+
+### Listar leituras de nível do reservatório A
+GET {{api}}/leituras?tipo=NIVEL&sensor=RES-A&limite=10
+
+### Buscar leitura por id
+GET {{api}}/leituras/1
+
+### ---------------- ATUADORES ----------------
+
+### Listar bombas e válvulas
+GET {{api}}/atuadores
+
+### Ligar a bomba 02 (id 2)
+POST {{api}}/atuadores/2/acionar
+Content-Type: application/json
+
+{
+  "estado": "LIGADO"
+}
+
+### Fechar a válvula de distribuição (id 3)
+POST {{api}}/atuadores/3/acionar
+Content-Type: application/json
+
+{
+  "estado": "DESLIGADO"
+}
+
+### ---------------- FALHAS ----------------
+
+### Listar falhas abertas
+GET {{api}}/falhas?status=ABERTAS
+
+### Listar todas as falhas (mais recentes primeiro)
+GET {{api}}/falhas?status=TODAS&limite=50
+
+### Registrar falha manualmente
+POST {{api}}/falhas
+Content-Type: application/json
+
+{
+  "codigo": "SENSOR_OFFLINE",
+  "descricao": "Sensor de nível do reservatório B sem resposta",
+  "severidade": "ALTA",
+  "origem": "RES-B"
+}
+
+### Resolver a falha 1
+PATCH {{api}}/falhas/1/resolver
