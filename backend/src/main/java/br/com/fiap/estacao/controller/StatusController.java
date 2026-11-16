@@ -1,5 +1,6 @@
 package br.com.fiap.estacao.controller;
 
+import br.com.fiap.estacao.config.ParametrosEstacao;
 import br.com.fiap.estacao.dto.StatusResponse;
 import br.com.fiap.estacao.model.Leitura;
 import br.com.fiap.estacao.model.TipoLeitura;
@@ -15,7 +16,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
- * Resumo da estação para o painel do app (uma chamada traz tudo).
+ * Estado operacional da estação para o painel do app (uma chamada traz tudo).
  */
 @RestController
 @RequestMapping("/api/status")
@@ -24,11 +25,16 @@ public class StatusController {
     private final LeituraService leituraService;
     private final AtuadorService atuadorService;
     private final FalhaService falhaService;
+    private final ParametrosEstacao parametros;
 
-    public StatusController(LeituraService leituraService, AtuadorService atuadorService, FalhaService falhaService) {
+    public StatusController(LeituraService leituraService,
+                            AtuadorService atuadorService,
+                            FalhaService falhaService,
+                            ParametrosEstacao parametros) {
         this.leituraService = leituraService;
         this.atuadorService = atuadorService;
         this.falhaService = falhaService;
+        this.parametros = parametros;
     }
 
     @GetMapping
@@ -44,6 +50,9 @@ public class StatusController {
                 Math.round(total * 100.0) / 100.0,
                 atuadorService.listar(),
                 falhaService.contarAbertas(),
-                falhaService.ultimasAbertas(5));
+                falhaService.ultimasAbertas(5),
+                parametros.limites(),
+                parametros.capacidadesLitros(),
+                parametros.isSimulacaoAtiva());
     }
 }
