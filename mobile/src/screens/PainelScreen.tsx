@@ -73,6 +73,8 @@ export default function PainelScreen({ navigation }: PropsAba<'Painel'>) {
       contentContainerStyle={estilos.conteudo}
       refreshControl={<RefreshControl refreshing={puxando} onRefresh={puxarParaAtualizar} tintColor={cores.ciano} colors={[cores.ciano]} />}
     >
+      <Text style={estilos.projeto}>Smart Water & Energy Station · painel de operação</Text>
+
       <View style={estilos.conexao}>
         <View style={[estilos.ponto, { backgroundColor: online ? cores.verde : cores.vermelho }]} />
         <View style={estilos.conexaoTextos}>
@@ -182,6 +184,7 @@ export default function PainelScreen({ navigation }: PropsAba<'Painel'>) {
 const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
   conteudo: { padding: 16, paddingBottom: 32, gap: 12 },
+  projeto: { color: cores.textoFraco, fontFamily: fontes.media, fontSize: 12, letterSpacing: 0.3 },
   conexao: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   ponto: { width: 10, height: 10, borderRadius: 5 },
   conexaoTextos: { flex: 1 },

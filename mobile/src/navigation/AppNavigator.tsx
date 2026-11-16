@@ -43,7 +43,7 @@ const ICONES: Record<keyof AbasParamList, NomeIcone> = {
 };
 
 const TITULOS: Record<keyof AbasParamList, string> = {
-  Painel: 'Smart Water & Energy Station',
+  Painel: 'AquaPulse',
   Agua: 'Água',
   Energia: 'Energia',
   Alertas: 'Alertas',
@@ -59,7 +59,8 @@ function AbasPrincipais() {
         headerShadowVisible: false,
         headerTintColor: cores.texto,
         headerTitleAlign: 'left',
-        headerTitle: () => <TituloCabecalho titulo={TITULOS[route.name]} />,
+        headerTitle: () =>
+          route.name === 'Painel' ? <TituloCabecalho marca /> : <TituloCabecalho titulo={TITULOS[route.name]} />,
         headerRight: () => <AcoesCabecalho />,
         tabBarActiveTintColor: cores.ciano,
         tabBarInactiveTintColor: cores.textoFraco,

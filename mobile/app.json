@@ -1,28 +1,32 @@
 {
   "expo": {
-    "name": "Smart Water & Energy",
-    "slug": "smart-water-energy-station",
+    "name": "AquaPulse",
+    "slug": "aquapulse",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/aquapulse/icon.png",
     "userInterfaceStyle": "dark",
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
+        "backgroundColor": "#0B1220",
+        "foregroundImage": "./assets/aquapulse/adaptive-icon.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/aquapulse/favicon.png"
     },
     "backgroundColor": "#0B1220",
     "plugins": [
       "expo-font"
-    ]
+    ],
+    "splash": {
+      "image": "./assets/aquapulse/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0B1220"
+    }
   }
 }

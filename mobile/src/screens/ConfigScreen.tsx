@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { normalizarUrl, urlPadrao, useApiConfig } from '../context/ApiConfigContext';
 import { criarEstacaoApi } from '../api/estacaoApi';
 import { comAlfa, cores, fontes, raio } from '../theme/cores';
+import { logoAquaPulse, PROPORCAO_LOGO } from '../theme/imagens';
 
 interface PropsBotao {
   titulo: string;
@@ -116,6 +117,12 @@ export default function ConfigScreen() {
         <Dica titulo="Emulador Android" texto="http://10.0.2.2:8080 (no emulador, 10.0.2.2 aponta para o computador)." />
         <Dica titulo="API fora do ar" texto="O app continua funcionando e mostra a última leitura disponível, com as ações desabilitadas." />
       </View>
+
+      <View style={[estilos.card, estilos.sobre]}>
+        <Image source={logoAquaPulse} resizeMode="contain" style={{ width: 200, height: 200 / PROPORCAO_LOGO }} accessibilityLabel="AquaPulse" />
+        <Text style={estilos.sobreTexto}>Painel de operação da Smart Water & Energy Station</Text>
+        <Text style={estilos.sobreDetalhe}>Global Solution 2026.2 · FIAP · versão 1.0</Text>
+      </View>
     </ScrollView>
   );
 }
@@ -154,6 +161,9 @@ const estilos = StyleSheet.create({
   resultado: { flexDirection: 'row', gap: 8, alignItems: 'center', borderWidth: 1, borderRadius: raio.controle, padding: 10, marginTop: 4 },
   resultadoTexto: { flex: 1, fontFamily: fontes.regular, fontSize: 13 },
   dica: { gap: 2, paddingVertical: 4 },
+  sobre: { alignItems: 'center', gap: 6, paddingVertical: 20 },
+  sobreTexto: { color: cores.textoSecundario, fontFamily: fontes.media, fontSize: 13, textAlign: 'center' },
+  sobreDetalhe: { color: cores.textoFraco, fontFamily: fontes.regular, fontSize: 11 },
   dicaTitulo: { color: cores.texto, fontFamily: fontes.media, fontSize: 13 },
   dicaTexto: { color: cores.textoSecundario, fontFamily: fontes.regular, fontSize: 12 },
 });
