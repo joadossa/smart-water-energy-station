@@ -1,6 +1,8 @@
-# Smart Water & Energy Station
+<p align="center"><img src="docs/aquapulse-banner.png" alt="AquaPulse" width="640"></p>
 
-Painel de operação de uma estação inteligente de **água e energia**. O sistema tem duas partes:
+# AquaPulse — Smart Water & Energy Station
+
+**AquaPulse** é o painel de operação da *Smart Water & Energy Station*, uma estação inteligente de **água e energia**. O sistema tem duas partes:
 
 - um **backend em Spring Boot** que registra as leituras dos sensores (níveis dos reservatórios, vazão e consumo elétrico simulado), aciona bombas e válvula e controla as falhas, com persistência em **H2 modo arquivo**;
 - um **app mobile em React Native (Expo + TypeScript)**, no visual **Industrial Dark**, que consome a API e mostra tudo em tempo real.
@@ -174,7 +176,8 @@ O projeto foi construído em etapas, cada uma registrada em commits no GitHub:
 3. simulador e documentação da API;
 4. app com navegação, consumo da API e tratamento de API fora do ar;
 5. endpoints complementares e testes;
-6. migração para TypeScript e redesenho Industrial Dark.
+6. migração para TypeScript e redesenho Industrial Dark;
+7. identidade visual AquaPulse.
 
 Veja o histórico completo em **Commits** no repositório.
 
@@ -182,3 +185,4 @@ Veja o histórico completo em **Commits** no repositório.
 
 - **Backend:** Java 21, Spring Boot 4 (Web MVC, Data JPA, Validation), H2, springdoc-openapi, JUnit 5
 - **Mobile:** React Native, Expo SDK 58, TypeScript, React Navigation 7 (abas + pilha), react-native-svg, AsyncStorage, Inter e Fira Sans (@expo-google-fonts)
+- **Identidade visual:** logo AquaPulse em `docs/` e `mobile/assets/aquapulse/` (ícone, splash, favicon e cabeçalho)

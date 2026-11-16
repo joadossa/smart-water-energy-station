@@ -1,6 +1,8 @@
-# Smart Water & Energy Station — App Mobile
+<p align="center"><img src="../docs/aquapulse-banner.png" alt="AquaPulse" width="560"></p>
 
-App em **React Native com Expo e TypeScript** que funciona como o **painel de operação** da Smart Water & Energy Station, no visual **Industrial Dark**. Ele consome a API REST do backend Spring Boot (dados reais, nada fixo no app) e mostra níveis, vazão, consumo elétrico simulado, bombas e alertas de falha.
+# AquaPulse — App Mobile
+
+**AquaPulse** é o app em **React Native com Expo e TypeScript** que funciona como o **painel de operação** da *Smart Water & Energy Station*, no visual **Industrial Dark**. Ele consome a API REST do backend Spring Boot (dados reais, nada fixo no app) e mostra níveis, vazão, consumo elétrico simulado, bombas e alertas de falha.
 
 Disciplina: **Advanced Programming and Mobile Dev** — Global Solution 2026.2 (FIAP)
 
@@ -83,3 +85,4 @@ mobile/
 - Paleta: fundo `#0B1220`, cartões `#111C2E`, ciano `#16D9E3`, azul `#648CFF`, verde `#22C55E`, amarelo `#F5B942`, vermelho `#F26464`, texto `#F8FAFC` / `#A8B4C8`
 - Fontes: **Inter** (texto) e **Fira Sans** (títulos e números), via `@expo-google-fonts`
 - Medidores e gráficos em SVG (`react-native-svg`)
+- Logo AquaPulse no cabeçalho do Painel, gota da marca nas outras abas, além de ícone, splash e favicon gerados do logo (`assets/aquapulse/`)

@@ -1,6 +1,8 @@
-# Smart Water & Energy Station — Backend (API REST)
+<p align="center"><img src="../docs/aquapulse-banner.png" alt="AquaPulse" width="560"></p>
 
-API em **Spring Boot (Java 21)**. Ela registra as leituras dos sensores da estação (níveis, vazão e consumo elétrico), aciona os atuadores (bombas e válvula) e controla as falhas. Os dados ficam em um **banco H2 em modo arquivo** (`jdbc:h2:file:./data/estacao`) e continuam lá depois de reiniciar a aplicação.
+# AquaPulse — Backend (API REST)
+
+Backend da *Smart Water & Energy Station*, uma API em **Spring Boot (Java 21)**. Ela registra as leituras dos sensores da estação (níveis, vazão e consumo elétrico), aciona os atuadores (bombas e válvula) e controla as falhas. Os dados ficam em um **banco H2 em modo arquivo** (`jdbc:h2:file:./data/estacao`) e continuam lá depois de reiniciar a aplicação.
 
 Disciplina: **Técnicas Avançadas de Programação** — Global Solution 2026.2 (FIAP)
 
@@ -47,7 +49,7 @@ Banco novo: atuadores iniciais cadastrados (BOMBA-01, BOMBA-02, VALVULA-01)
 | Recurso | URL |
 |---|---|
 | Estado da estação | http://localhost:8080/api/status |
-| Swagger UI (documentação interativa) | http://localhost:8080/swagger-ui.html |
+| Swagger UI (documentação interativa, "AquaPulse API") | http://localhost:8080/swagger-ui.html |
 | OpenAPI (JSON) | http://localhost:8080/v3/api-docs |
 | Console do H2 | http://localhost:8080/h2-console |
 
@@ -222,7 +224,7 @@ backend/
 ├── requests.http                 # exemplos de requisições
 └── src/
     ├── main/java/br/com/fiap/estacao/
-    │   ├── config/      CorsConfig, DataInitializer, ParametrosEstacao
+    │   ├── config/      CorsConfig, DataInitializer, ParametrosEstacao, OpenApiConfig
     │   ├── controller/  Leitura, Atuador, Falha e Status
     │   ├── dto/         objetos de entrada/saída da API
     │   ├── exception/   tratamento global de erros
