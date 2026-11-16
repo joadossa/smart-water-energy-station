@@ -1,14 +1,17 @@
 # =============================================================
 # Smart Water & Energy Station - exemplos de requisições
 # Use com a extensão "REST Client" do VS Code (clique em "Send Request")
-# ou copie para o Postman/Insomnia.
+# ou copie para o Postman/Insomnia. Equivalentes em curl estão no README.
 # =============================================================
 @api = http://localhost:8080/api
 
-### Status geral (resumo usado pelo painel do app)
+### Status operacional (resumo usado pelo painel do app)
 GET {{api}}/status
 
 ### ---------------- LEITURAS ----------------
+
+### Última leitura consolidada (níveis A/B, vazões e potência total)
+GET {{api}}/leituras/ultima
 
 ### Registrar leitura de nível (%)
 POST {{api}}/leituras
@@ -26,11 +29,11 @@ Content-Type: application/json
 
 {
   "tipo": "VAZAO",
-  "sensor": "ENTRADA",
-  "valor": 41.8
+  "sensor": "SAIDA",
+  "valor": 24.6
 }
 
-### Registrar leitura de consumo elétrico (kW) - acima do limite: abre falha SOBRECARGA
+### Registrar consumo elétrico (kW) acima do limite -> abre falha SOBRECARGA
 POST {{api}}/leituras
 Content-Type: application/json
 
@@ -40,7 +43,7 @@ Content-Type: application/json
   "valor": 17.3
 }
 
-### Registrar nível baixo - abre falha NIVEL_BAIXO automaticamente
+### Registrar nível baixo -> abre falha NIVEL_BAIXO automaticamente
 POST {{api}}/leituras
 Content-Type: application/json
 
@@ -50,7 +53,7 @@ Content-Type: application/json
   "valor": 12
 }
 
-### Leitura inválida - retorna 400 com os campos inválidos
+### Leitura inválida -> 400 com os campos inválidos
 POST {{api}}/leituras
 Content-Type: application/json
 
@@ -59,10 +62,13 @@ Content-Type: application/json
   "valor": -5
 }
 
-### Listar as 20 leituras mais recentes
+### Histórico: 20 leituras mais recentes
 GET {{api}}/leituras?limite=20
 
-### Listar leituras de nível do reservatório A
+### Histórico: vazão de saída dos últimos 15 minutos
+GET {{api}}/leituras?tipo=VAZAO&sensor=SAIDA&minutos=15&limite=500
+
+### Histórico: nível do reservatório A
 GET {{api}}/leituras?tipo=NIVEL&sensor=RES-A&limite=10
 
 ### Buscar leitura por id
@@ -70,19 +76,27 @@ GET {{api}}/leituras/1
 
 ### ---------------- ATUADORES ----------------
 
-### Listar bombas e válvulas
+### Listar bombas e válvula
 GET {{api}}/atuadores
 
 ### Ligar a bomba 02 (id 2)
-POST {{api}}/atuadores/2/acionar
+PUT {{api}}/atuadores/2
 Content-Type: application/json
 
 {
   "estado": "LIGADO"
 }
 
+### Desligar a bomba 02 (id 2)
+PUT {{api}}/atuadores/2
+Content-Type: application/json
+
+{
+  "estado": "DESLIGADO"
+}
+
 ### Fechar a válvula de distribuição (id 3)
-POST {{api}}/atuadores/3/acionar
+PUT {{api}}/atuadores/3
 Content-Type: application/json
 
 {
@@ -96,6 +110,9 @@ GET {{api}}/falhas?status=ABERTAS
 
 ### Listar todas as falhas (mais recentes primeiro)
 GET {{api}}/falhas?status=TODAS&limite=50
+
+### Detalhe de uma falha
+GET {{api}}/falhas/1
 
 ### Registrar falha manualmente
 POST {{api}}/falhas
