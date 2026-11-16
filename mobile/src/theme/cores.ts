@@ -1,3 +1,5 @@
+import type { Severidade } from '../types/api';
+
 // Paleta do painel de operação (tema escuro)
 export const cores = {
   fundo: '#0B1220',
@@ -15,7 +17,7 @@ export const cores = {
 };
 
 // Cor de cada severidade de falha vinda da API
-export const coresSeveridade = {
+export const coresSeveridade: Record<Severidade, string> = {
   BAIXA: '#38BDF8',
   MEDIA: '#FACC15',
   ALTA: '#F97316',
