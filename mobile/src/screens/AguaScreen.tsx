@@ -18,7 +18,7 @@ import MedidorCircular from '../components/MedidorCircular';
 import MensagemResultado from '../components/MensagemResultado';
 import { comAlfa, cores, fontes, raio } from '../theme/cores';
 import { LIMITES_PADRAO, type Leitura } from '../types/api';
-import { acaoPara, descreverEstado, nomeAtuador } from '../utils/atuadores';
+import { acaoPara, corDaAcao, descreverEstado, nomeAtuador } from '../utils/atuadores';
 import { calcularTendencia, pontosDoSensor } from '../utils/estatistica';
 import { formatarHora, formatarInteiro, formatarNumero, nomeSensor } from '../utils/formatar';
 import { descreverTendencia, situacaoNivel } from '../utils/textos';
@@ -197,6 +197,7 @@ export default function AguaScreen() {
             : ''
         }
         textoConfirmar={pedido ? acaoPara(pedido.atuador, pedido.novoEstado) : 'Confirmar'}
+        corConfirmar={pedido ? corDaAcao(pedido.novoEstado) : cores.ciano}
         carregando={acionamento.executando}
         onConfirmar={() => void acionamento.confirmar()}
         onCancelar={acionamento.cancelar}

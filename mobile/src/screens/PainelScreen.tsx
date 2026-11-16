@@ -12,10 +12,10 @@ import CartaoSecao from '../components/CartaoSecao';
 import Carregando from '../components/Carregando';
 import EtiquetaStatus from '../components/EtiquetaStatus';
 import GraficoLinha from '../components/GraficoLinha';
+import LinhaAtuador from '../components/LinhaAtuador';
 import MedidorCircular from '../components/MedidorCircular';
 import { comAlfa, cores, fontes, raio } from '../theme/cores';
 import { LIMITES_PADRAO } from '../types/api';
-import { nomeAtuador } from '../utils/atuadores';
 import { calcularTendencia, pontosDoSensor } from '../utils/estatistica';
 import { formatarHora, formatarInteiro, formatarNumero, nomeSensor, valorDoSensor } from '../utils/formatar';
 import { descreverTendencia, situacaoNivel } from '../utils/textos';
@@ -152,16 +152,9 @@ export default function PainelScreen({ navigation }: PropsAba<'Painel'>) {
             acao={{ rotulo: 'Controlar', onPress: () => navigation.navigate('Energia') }}
           >
             <View style={estilos.bombas}>
-              {bombas.map((bomba) => {
-                const ligada = bomba.estado === 'LIGADO';
-                return (
-                  <View key={bomba.id} style={estilos.bomba}>
-                    <Ionicons name="cog-outline" size={20} color={ligada ? cores.verde : cores.textoFraco} />
-                    <Text style={estilos.bombaNome}>{nomeAtuador(bomba)}</Text>
-                    <EtiquetaStatus texto={ligada ? 'Ligada' : 'Desligada'} cor={ligada ? cores.verde : cores.textoFraco} />
-                  </View>
-                );
-              })}
+              {bombas.map((bomba) => (
+                <LinhaAtuador key={bomba.id} atuador={bomba} />
+              ))}
             </View>
           </CartaoSecao>
 
@@ -214,6 +207,4 @@ const estilos = StyleSheet.create({
   },
   nomeReservatorio: { color: cores.texto, fontFamily: fontes.seminegrito, fontSize: 13, alignSelf: 'flex-start' },
   bombas: { gap: 8 },
-  bomba: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  bombaNome: { flex: 1, color: cores.texto, fontFamily: fontes.media, fontSize: 14 },
 });

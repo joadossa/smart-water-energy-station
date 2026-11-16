@@ -84,5 +84,6 @@ mobile/
 
 - Paleta: fundo `#0B1220`, cartões `#111C2E`, ciano `#16D9E3`, azul `#648CFF`, verde `#22C55E`, amarelo `#F5B942`, vermelho `#F26464`, texto `#F8FAFC` / `#A8B4C8`
 - Fontes: **Inter** (texto) e **Fira Sans** (títulos e números), via `@expo-google-fonts`
+- Bombas e válvula: estado **verde** quando ligada/aberta e **vermelho** quando desligada/fechada; botões **Desligar/Fechar** em vermelho e **Ligar/Abrir** em ciano (também no botão de confirmação)
 - Medidores e gráficos em SVG (`react-native-svg`)
 - Logo AquaPulse no cabeçalho do Painel, gota da marca nas outras abas, além de ícone, splash e favicon gerados do logo (`assets/aquapulse/`)

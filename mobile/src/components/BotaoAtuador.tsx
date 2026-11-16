@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import EtiquetaStatus from './EtiquetaStatus';
 import { comAlfa, cores, fontes, raio } from '../theme/cores';
 import type { Atuador, EstadoAtuador } from '../types/api';
-import { acaoPara, descreverEstado, estadoOposto, nomeAtuador } from '../utils/atuadores';
+import { acaoPara, corDaAcao, corDoEstado, estadoOposto, nomeAtuador, rotuloEstado } from '../utils/atuadores';
 import { formatarHora, formatarNumero } from '../utils/formatar';
 
 interface Props {
@@ -19,9 +19,12 @@ interface Props {
 export default function BotaoAtuador({ atuador, onAlternar, ocupado = false }: Props) {
   const ligado = atuador.estado === 'LIGADO';
   const valvula = atuador.tipo === 'VALVULA';
-  const corEstado = ligado ? cores.verde : cores.textoFraco;
+  const novoEstado = estadoOposto(atuador.estado);
+  const acao = acaoPara(atuador, novoEstado);
+  // Desligada/fechada em vermelho; botão Desligar/Fechar em vermelho, Ligar/Abrir em ciano
+  const corEstado = corDoEstado(atuador.estado);
+  const corBotao = corDaAcao(novoEstado);
   const desabilitado = ocupado || !onAlternar;
-  const estadoTexto = descreverEstado(atuador, atuador.estado);
 
   return (
     <View style={estilos.linha}>
@@ -34,31 +37,17 @@ export default function BotaoAtuador({ atuador, onAlternar, ocupado = false }: P
         <Text style={estilos.detalhe}>
           {atuador.codigo} · {formatarNumero(atuador.potenciaKw)} kW · desde {formatarHora(atuador.atualizadoEm)}
         </Text>
-        <EtiquetaStatus
-          texto={estadoTexto.charAt(0).toUpperCase() + estadoTexto.slice(1)}
-          cor={corEstado}
-          icone={ligado ? 'checkmark-circle' : 'pause-circle-outline'}
-        />
+        <EtiquetaStatus texto={rotuloEstado(atuador, atuador.estado)} cor={corEstado} icone={ligado ? 'checkmark-circle' : 'close-circle'} />
       </View>
 
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel={`${acaoPara(atuador, estadoOposto(atuador.estado))} ${nomeAtuador(atuador)}`}
-        onPress={() => onAlternar && onAlternar(atuador, estadoOposto(atuador.estado))}
+        accessibilityLabel={`${acao} ${nomeAtuador(atuador)}`}
+        onPress={() => onAlternar && onAlternar(atuador, novoEstado)}
         disabled={desabilitado}
-        style={({ pressed }) => [
-          estilos.botao,
-          ligado ? estilos.botaoDesligar : estilos.botaoLigar,
-          (pressed || desabilitado) && { opacity: 0.45 },
-        ]}
+        style={({ pressed }) => [estilos.botao, { backgroundColor: corBotao }, (pressed || desabilitado) && { opacity: 0.45 }]}
       >
-        {ocupado ? (
-          <ActivityIndicator size="small" color={ligado ? cores.texto : cores.fundo} />
-        ) : (
-          <Text style={[estilos.botaoTexto, { color: ligado ? cores.texto : cores.fundo }]}>
-            {acaoPara(atuador, estadoOposto(atuador.estado))}
-          </Text>
-        )}
+        {ocupado ? <ActivityIndicator size="small" color={cores.fundo} /> : <Text style={estilos.botaoTexto}>{acao}</Text>}
       </Pressable>
     </View>
   );
@@ -78,7 +67,5 @@ const estilos = StyleSheet.create({
   nome: { color: cores.texto, fontFamily: fontes.seminegrito, fontSize: 14 },
   detalhe: { color: cores.textoSecundario, fontFamily: fontes.regular, fontSize: 11 },
   botao: { borderRadius: raio.controle, paddingVertical: 10, paddingHorizontal: 14, minWidth: 94, alignItems: 'center' },
-  botaoLigar: { backgroundColor: cores.ciano },
-  botaoDesligar: { backgroundColor: cores.cardElevado, borderWidth: 1, borderColor: cores.borda },
-  botaoTexto: { fontFamily: fontes.seminegrito },
+  botaoTexto: { color: cores.fundo, fontFamily: fontes.seminegrito },
 });

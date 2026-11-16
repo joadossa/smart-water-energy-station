@@ -16,7 +16,7 @@ import GraficoLinha from '../components/GraficoLinha';
 import MensagemResultado from '../components/MensagemResultado';
 import { comAlfa, cores, fontes, raio } from '../theme/cores';
 import { LIMITES_PADRAO } from '../types/api';
-import { acaoPara, descreverEstado, nomeAtuador } from '../utils/atuadores';
+import { acaoPara, corDaAcao, descreverEstado, nomeAtuador } from '../utils/atuadores';
 import { calcularTendencia, integrarEnergiaKwh, somarPorInstante } from '../utils/estatistica';
 import { formatarHora, formatarNumero, nomeSensor, paraData } from '../utils/formatar';
 import { descreverTendencia } from '../utils/textos';
@@ -174,7 +174,7 @@ export default function EnergiaScreen() {
             : ''
         }
         textoConfirmar={pedido ? acaoPara(pedido.atuador, pedido.novoEstado) : 'Confirmar'}
-        corConfirmar={pedido?.novoEstado === 'DESLIGADO' ? cores.laranja : cores.ciano}
+        corConfirmar={pedido ? corDaAcao(pedido.novoEstado) : cores.ciano}
         carregando={acionamento.executando}
         onConfirmar={() => void acionamento.confirmar()}
         onCancelar={acionamento.cancelar}
