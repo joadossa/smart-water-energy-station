@@ -1,22 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { normalizarUrl, urlPadrao, useApiConfig } from '../context/ApiConfigContext';
 import { criarEstacaoApi } from '../api/estacaoApi';
-import { cores } from '../theme/cores';
+import { comAlfa, cores, fontes, raio } from '../theme/cores';
 
-function Botao({ titulo, onPress, carregando = false, secundario = false }) {
+interface PropsBotao {
+  titulo: string;
+  onPress: () => void;
+  carregando?: boolean;
+  secundario?: boolean;
+}
+
+function Botao({ titulo, onPress, carregando = false, secundario = false }: PropsBotao) {
   return (
     <Pressable
       onPress={onPress}
       disabled={carregando}
-      style={({ pressed }) => [
-        estilos.botao,
-        secundario && estilos.botaoSecundario,
-        (pressed || carregando) && estilos.botaoPressionado,
-      ]}
+      style={({ pressed }) => [estilos.botao, secundario && estilos.botaoSecundario, (pressed || carregando) && { opacity: 0.7 }]}
     >
-      {carregando ? <ActivityIndicator color={cores.texto} /> : <Text style={estilos.botaoTexto}>{titulo}</Text>}
+      {carregando ? (
+        <ActivityIndicator color={secundario ? cores.texto : cores.fundo} />
+      ) : (
+        <Text style={[estilos.botaoTexto, secundario && { color: cores.texto }]}>{titulo}</Text>
+      )}
     </Pressable>
   );
 }
@@ -24,7 +32,7 @@ function Botao({ titulo, onPress, carregando = false, secundario = false }) {
 export default function ConfigScreen() {
   const { apiUrl, salvarUrl, restaurarPadrao } = useApiConfig();
   const [texto, setTexto] = useState(apiUrl);
-  const [resultado, setResultado] = useState(null); // { ok: boolean, mensagem: string }
+  const [resultado, setResultado] = useState<{ ok: boolean; mensagem: string } | null>(null);
   const [testando, setTestando] = useState(false);
 
   useEffect(() => {
@@ -41,11 +49,12 @@ export default function ConfigScreen() {
     setResultado(null);
     try {
       const status = await criarEstacaoApi(url).buscarStatus();
-      const atuadores = status?.atuadores?.length ?? 0;
-      const falhas = status?.falhasAbertas ?? 0;
-      setResultado({ ok: true, mensagem: `Conectado a ${url}: ${atuadores} atuadores, ${falhas} falha(s) aberta(s).` });
+      setResultado({
+        ok: true,
+        mensagem: `Conectado a ${url}: ${status.atuadores.length} atuadores, ${status.falhasAbertas} falha(s) aberta(s).`,
+      });
     } catch (e) {
-      setResultado({ ok: false, mensagem: `${e.message} (${url})` });
+      setResultado({ ok: false, mensagem: `${e instanceof Error ? e.message : String(e)} (${url})` });
     } finally {
       setTestando(false);
     }
@@ -56,7 +65,7 @@ export default function ConfigScreen() {
       const url = await salvarUrl(texto);
       setResultado({ ok: true, mensagem: `Endereço salvo: ${url}` });
     } catch (e) {
-      setResultado({ ok: false, mensagem: e.message });
+      setResultado({ ok: false, mensagem: e instanceof Error ? e.message : String(e) });
     }
   }
 
@@ -67,70 +76,84 @@ export default function ConfigScreen() {
 
   return (
     <ScrollView style={estilos.tela} contentContainerStyle={estilos.conteudo} keyboardShouldPersistTaps="handled">
-      <Text style={estilos.rotulo}>Endereço da API (backend Spring Boot)</Text>
-      <TextInput
-        value={texto}
-        onChangeText={setTexto}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-        placeholder="http://192.168.0.10:8080"
-        placeholderTextColor={cores.textoSecundario}
-        style={estilos.input}
-      />
-      <Text style={estilos.info}>Em uso: {apiUrl}</Text>
-      <Text style={estilos.info}>Padrão detectado: {urlPadrao()}</Text>
+      <View style={estilos.card}>
+        <Text style={estilos.rotulo}>Endereço da API (backend Spring Boot)</Text>
+        <TextInput
+          value={texto}
+          onChangeText={setTexto}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          placeholder="http://<IP-do-computador>:8080"
+          placeholderTextColor={cores.textoFraco}
+          style={estilos.input}
+        />
+        <Text style={estilos.info}>Em uso: {apiUrl}</Text>
+        <Text style={estilos.info}>Padrão detectado: {urlPadrao()}</Text>
 
-      <View style={estilos.botoes}>
-        <Botao titulo="Testar conexão" onPress={testarConexao} carregando={testando} />
-        <Botao titulo="Salvar" onPress={salvar} />
-        <Botao titulo="Restaurar padrão" onPress={restaurar} secundario />
+        <View style={estilos.botoes}>
+          <Botao titulo="Testar conexão" onPress={testarConexao} carregando={testando} />
+          <Botao titulo="Salvar" onPress={salvar} />
+          <Botao titulo="Restaurar padrão" onPress={restaurar} secundario />
+        </View>
+
+        {resultado ? (
+          <View style={[estilos.resultado, { borderColor: comAlfa(resultado.ok ? cores.verde : cores.vermelho, 0.5) }]}>
+            <Ionicons
+              name={resultado.ok ? 'checkmark-circle-outline' : 'close-circle-outline'}
+              size={18}
+              color={resultado.ok ? cores.verde : cores.vermelho}
+            />
+            <Text style={[estilos.resultadoTexto, { color: resultado.ok ? cores.verde : cores.vermelho }]}>{resultado.mensagem}</Text>
+          </View>
+        ) : null}
       </View>
 
-      {resultado ? (
-        <Text style={[estilos.resultado, { color: resultado.ok ? cores.ok : cores.critico }]}>{resultado.mensagem}</Text>
-      ) : null}
-
-      <View style={estilos.dica}>
-        <Text style={estilos.dicaTitulo}>Dicas</Text>
-        <Text style={estilos.dicaTexto}>• No celular, use o IP do computador onde o backend está rodando, por exemplo http://192.168.0.10:8080.</Text>
-        <Text style={estilos.dicaTexto}>• Celular e computador precisam estar na mesma rede Wi-Fi.</Text>
-        <Text style={estilos.dicaTexto}>• No navegador do próprio computador, use http://localhost:8080.</Text>
-        <Text style={estilos.dicaTexto}>• Se a API cair, o app continua funcionando e mostra o aviso "API fora do ar".</Text>
+      <View style={estilos.card}>
+        <Text style={estilos.titulo}>Qual endereço usar?</Text>
+        <Dica titulo="Celular físico (Expo Go)" texto="IP do computador na rede local, ex.: http://192.168.x.x:8080. Celular e computador na mesma rede Wi-Fi." />
+        <Dica titulo="Navegador no computador / simulador iOS" texto="http://localhost:8080" />
+        <Dica titulo="Emulador Android" texto="http://10.0.2.2:8080 (no emulador, 10.0.2.2 aponta para o computador)." />
+        <Dica titulo="API fora do ar" texto="O app continua funcionando e mostra a última leitura disponível, com as ações desabilitadas." />
       </View>
     </ScrollView>
   );
 }
 
+function Dica({ titulo, texto }: { titulo: string; texto: string }) {
+  return (
+    <View style={estilos.dica}>
+      <Text style={estilos.dicaTitulo}>{titulo}</Text>
+      <Text style={estilos.dicaTexto}>{texto}</Text>
+    </View>
+  );
+}
+
 const estilos = StyleSheet.create({
   tela: { flex: 1, backgroundColor: cores.fundo },
-  conteudo: { padding: 16, gap: 8 },
-  rotulo: { color: cores.texto, fontSize: 15, fontWeight: '600' },
+  conteudo: { padding: 16, gap: 12 },
+  card: { backgroundColor: cores.card, borderColor: cores.borda, borderWidth: 1, borderRadius: raio.card, padding: 16, gap: 8 },
+  rotulo: { color: cores.texto, fontFamily: fontes.seminegrito, fontSize: 14 },
+  titulo: { color: cores.texto, fontFamily: fontes.titulo, fontSize: 16, marginBottom: 4 },
   input: {
-    backgroundColor: cores.card,
+    backgroundColor: cores.fundo,
     borderColor: cores.borda,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: raio.controle,
     color: cores.texto,
+    fontFamily: fontes.regular,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
   },
-  info: { color: cores.textoSecundario, fontSize: 12 },
+  info: { color: cores.textoSecundario, fontFamily: fontes.regular, fontSize: 12 },
   botoes: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
-  botao: {
-    backgroundColor: cores.primaria,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    minWidth: 120,
-    alignItems: 'center',
-  },
-  botaoSecundario: { backgroundColor: cores.cardClaro },
-  botaoPressionado: { opacity: 0.7 },
-  botaoTexto: { color: cores.texto, fontWeight: '600' },
-  resultado: { marginTop: 8, fontSize: 14 },
-  dica: { marginTop: 16, backgroundColor: cores.card, borderRadius: 12, padding: 12, gap: 4 },
-  dicaTitulo: { color: cores.texto, fontWeight: '700', marginBottom: 4 },
-  dicaTexto: { color: cores.textoSecundario, fontSize: 13 },
+  botao: { backgroundColor: cores.ciano, paddingVertical: 10, paddingHorizontal: 14, borderRadius: raio.controle, minWidth: 120, alignItems: 'center' },
+  botaoSecundario: { backgroundColor: cores.cardElevado },
+  botaoTexto: { color: cores.fundo, fontFamily: fontes.seminegrito },
+  resultado: { flexDirection: 'row', gap: 8, alignItems: 'center', borderWidth: 1, borderRadius: raio.controle, padding: 10, marginTop: 4 },
+  resultadoTexto: { flex: 1, fontFamily: fontes.regular, fontSize: 13 },
+  dica: { gap: 2, paddingVertical: 4 },
+  dicaTitulo: { color: cores.texto, fontFamily: fontes.media, fontSize: 13 },
+  dicaTexto: { color: cores.textoSecundario, fontFamily: fontes.regular, fontSize: 12 },
 });

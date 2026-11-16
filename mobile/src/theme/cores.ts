@@ -1,33 +1,58 @@
 import type { Severidade } from '../types/api';
 
-// Paleta do painel de operação (tema escuro)
+// Paleta "Industrial Dark"
 export const cores = {
   fundo: '#0B1220',
-  card: '#131C2E',
-  cardClaro: '#1A2540',
-  borda: '#22304A',
-  texto: '#E6EDF7',
-  textoSecundario: '#8FA3BF',
-  primaria: '#0EA5E9',
-  agua: '#38BDF8',
-  energia: '#FACC15',
+  card: '#111C2E',
+  cardElevado: '#17243A',
+  borda: '#1F2D45',
+  texto: '#F8FAFC',
+  textoSecundario: '#A8B4C8',
+  textoFraco: '#6E7C94',
+  ciano: '#16D9E3',
+  azul: '#648CFF',
+  verde: '#22C55E',
+  amarelo: '#F5B942',
+  laranja: '#F59E42',
+  vermelho: '#F26464',
+
+  // Nomes usados pelas primeiras versões das telas (removidos quando todas forem redesenhadas)
+  cardClaro: '#17243A',
+  primaria: '#16D9E3',
+  agua: '#16D9E3',
+  energia: '#F5B942',
   ok: '#22C55E',
-  alerta: '#F97316',
-  critico: '#EF4444',
+  alerta: '#F59E42',
+  critico: '#F26464',
 };
 
 // Cor de cada severidade de falha vinda da API
 export const coresSeveridade: Record<Severidade, string> = {
-  BAIXA: '#38BDF8',
-  MEDIA: '#FACC15',
-  ALTA: '#F97316',
-  CRITICA: '#EF4444',
+  BAIXA: cores.azul,
+  MEDIA: cores.amarelo,
+  ALTA: cores.laranja,
+  CRITICA: cores.vermelho,
 };
 
-export const espacamento = {
-  xs: 4,
-  sm: 8,
-  md: 12,
-  lg: 16,
-  xl: 24,
+// Famílias carregadas em App.tsx (@expo-google-fonts)
+export const fontes = {
+  regular: 'Inter_400Regular',
+  media: 'Inter_500Medium',
+  seminegrito: 'Inter_600SemiBold',
+  titulo: 'FiraSans_600SemiBold',
+  tituloMedio: 'FiraSans_500Medium',
 };
+
+export const raio = {
+  card: 14,
+  controle: 10,
+  pilula: 999,
+};
+
+/** Aplica transparência a uma cor hexadecimal de 6 dígitos (ex.: comAlfa('#16D9E3', 0.15)). */
+export function comAlfa(cor: string, alfa: number): string {
+  const hex = Math.round(Math.max(0, Math.min(1, alfa)) * 255)
+    .toString(16)
+    .padStart(2, '0');
+  return `${cor}${hex}`;
+}
