@@ -1,0 +1,8 @@
+# Sistema operacional / editores
+.DS_Store
+Thumbs.db
+.vscode/
+*.log
+
+# Banco H2 gerado ao rodar o backend (não versionar)
+backend/data/*.db
