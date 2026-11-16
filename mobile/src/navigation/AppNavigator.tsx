@@ -10,6 +10,7 @@ import AguaScreen from '../screens/AguaScreen';
 import EnergiaScreen from '../screens/EnergiaScreen';
 import AlertasScreen from '../screens/AlertasScreen';
 import ConfigScreen from '../screens/ConfigScreen';
+import DetalheFalhaScreen from '../screens/DetalheFalhaScreen';
 import TituloCabecalho from '../components/TituloCabecalho';
 import AcoesCabecalho from '../components/AcoesCabecalho';
 import { useResumo } from '../context/ResumoContext';
@@ -101,6 +102,11 @@ export default function AppNavigator() {
       >
         <Pilha.Screen name="Abas" component={AbasPrincipais} options={{ headerShown: false }} />
         <Pilha.Screen name="Config" component={ConfigScreen} options={{ title: 'Configurações' }} />
+        <Pilha.Screen
+          name="DetalheFalha"
+          component={DetalheFalhaScreen}
+          options={({ route }) => ({ title: `Falha #${route.params.falha.id}` })}
+        />
       </Pilha.Navigator>
     </NavigationContainer>
   );

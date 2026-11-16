@@ -15,15 +15,6 @@ export const cores = {
   amarelo: '#F5B942',
   laranja: '#F59E42',
   vermelho: '#F26464',
-
-  // Nomes usados pelas primeiras versões das telas (removidos quando todas forem redesenhadas)
-  cardClaro: '#17243A',
-  primaria: '#16D9E3',
-  agua: '#16D9E3',
-  energia: '#F5B942',
-  ok: '#22C55E',
-  alerta: '#F59E42',
-  critico: '#F26464',
 };
 
 // Cor de cada severidade de falha vinda da API
