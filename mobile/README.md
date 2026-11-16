@@ -6,13 +6,11 @@
 
 Disciplina: **Advanced Programming and Mobile Dev** — Global Solution 2026.2 (FIAP)
 
-## Integrantes
+## Integrante
 
 | Nome completo | RM |
 |---|---|
 | João Victor Pereira | 550306 |
-| *(integrante 2 — preencher)* | *(RM)* |
-| *(integrante 3 — preencher)* | *(RM)* |
 
 ## Telas
 

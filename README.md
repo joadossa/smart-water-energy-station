@@ -10,13 +10,11 @@
 **Global Solution 2026.2 — FIAP · Engenharia Mecatrônica (2º ano)**
 Disciplinas: *Advanced Programming and Mobile Dev* (app) e *Técnicas Avançadas de Programação* (backend)
 
-## Integrantes
+## Integrante
 
 | Nome completo | RM |
 |---|---|
 | João Victor Pereira | 550306 |
-| *(integrante 2 — preencher)* | *(RM)* |
-| *(integrante 3 — preencher)* | *(RM)* |
 
 ## Arquitetura
 
@@ -177,7 +175,8 @@ O projeto foi construído em etapas, cada uma registrada em commits no GitHub:
 4. app com navegação, consumo da API e tratamento de API fora do ar;
 5. endpoints complementares e testes;
 6. migração para TypeScript e redesenho Industrial Dark;
-7. identidade visual AquaPulse.
+7. identidade visual AquaPulse;
+8. ajustes de interface: cores dos comandos e válvula no Painel.
 
 Veja o histórico completo em **Commits** no repositório.
 
